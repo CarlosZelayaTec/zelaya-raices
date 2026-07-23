@@ -5,7 +5,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/agente", "/login"],
+      disallow: [
+        "/admin",
+        "/panel",
+        "/login",
+        "/actualizar-contrasena",
+        "/activar-administracion",
+        "/auth",
+      ],
     },
     sitemap: "https://zelayaraices.com/sitemap.xml",
   };

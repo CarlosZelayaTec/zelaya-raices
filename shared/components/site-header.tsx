@@ -21,10 +21,13 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="header-actions">
-          <Link className="text-link" href="/#para-agentes">
-            Para agentes
+          <Link className="text-link" href="/login">
+            Iniciar sesión
           </Link>
-          <Link className="button button--primary button--small" href="/#para-agentes">
+          <Link
+            className="button button--primary button--small"
+            href="/panel/propiedades/nueva"
+          >
             Publicar propiedad
           </Link>
         </div>
@@ -40,8 +43,11 @@ export function SiteHeader() {
                 {item.label}
               </Link>
             ))}
-            <Link href="/#para-agentes">Para agentes</Link>
-            <Link className="button button--primary" href="/#para-agentes">
+            <Link href="/login">Iniciar sesión</Link>
+            <Link
+              className="button button--primary"
+              href="/panel/propiedades/nueva"
+            >
               Publicar propiedad
             </Link>
           </nav>

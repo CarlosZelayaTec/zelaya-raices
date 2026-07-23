@@ -1,0 +1,227 @@
+.page {
+  width: min(100%, 860px);
+  margin-inline: auto;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid rgba(23, 33, 29, 0.1);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 20px 60px rgba(18, 61, 49, 0.07);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 20px 28px;
+  border-bottom: 1px solid rgba(23, 33, 29, 0.09);
+  background: #faf9f5;
+}
+
+.progress > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green-900);
+  color: white;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.progress div {
+  display: grid;
+}
+
+.progress strong {
+  color: var(--green-950);
+  font-size: 13px;
+}
+
+.progress small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.form {
+  padding: clamp(24px, 5vw, 44px);
+}
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 0 30px;
+  padding: 0;
+  border: 0;
+}
+
+.typeGrid legend {
+  grid-column: 1 / -1;
+  margin-bottom: 7px;
+  color: var(--green-950);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.typeCard {
+  position: relative;
+  display: grid;
+  min-height: 160px;
+  align-content: start;
+  gap: 12px;
+  border: 1px solid rgba(23, 33, 29, 0.12);
+  border-radius: 17px;
+  padding: 18px;
+  background: #faf9f5;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.typeCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--green-700);
+}
+
+.typeCard[data-selected="true"] {
+  border-color: var(--green-700);
+  background: #f0f6f2;
+  box-shadow: 0 0 0 3px rgba(36, 112, 90, 0.09);
+}
+
+.typeCard input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.typeMark {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--green-100);
+  color: var(--green-900);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.typeCard strong,
+.typeCard small {
+  display: block;
+}
+
+.typeCard strong {
+  color: var(--green-950);
+  font-size: 12px;
+}
+
+.typeCard small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.check {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: none;
+  color: var(--green-700);
+  font-weight: 900;
+}
+
+.typeCard[data-selected="true"] .check {
+  display: block;
+}
+
+.fields {
+  display: grid;
+  gap: 19px;
+}
+
+.fields label {
+  display: grid;
+  gap: 7px;
+}
+
+.fields label > span {
+  color: var(--green-950);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.fields input,
+.fields textarea {
+  width: 100%;
+  border: 1px solid rgba(23, 33, 29, 0.14);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: white;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.fields textarea {
+  resize: vertical;
+}
+
+.fields label > small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.assurance {
+  display: flex;
+  gap: 11px;
+  margin: 24px 0;
+  border-radius: 13px;
+  padding: 13px 15px;
+  background: var(--green-100);
+  color: var(--green-950);
+}
+
+.assurance > span {
+  font-weight: 900;
+}
+
+.assurance p {
+  margin: 0;
+  font-size: 10px;
+}
+
+.error {
+  margin: 0 0 16px;
+  border-radius: 11px;
+  padding: 11px 13px;
+  background: #f5e3dc;
+  color: #8a3d28;
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 720px) {
+  .typeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .typeCard {
+    min-height: auto;
+    grid-template-columns: 39px 1fr;
+    align-items: center;
+  }
+}
+

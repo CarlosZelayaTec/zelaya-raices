@@ -61,3 +61,30 @@ test("renders a property detail with structured data", async () => {
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /SingleFamilyResidence/);
 });
+
+test("renders Supabase login without caching private responses", async () => {
+  const response = await render("/login");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("cache-control") ?? "", /no-store/i);
+
+  const html = await response.text();
+  assert.match(html, /Inicia sesión|Iniciar sesión/);
+  assert.match(html, /Crear cuenta/);
+  assert.match(html, /Correo electrónico/);
+});
+
+test("redirects anonymous users away from protected panels", async () => {
+  const panelResponse = await render("/panel");
+  assert.equal(panelResponse.status, 307);
+  assert.equal(
+    panelResponse.headers.get("location"),
+    "http://localhost/login?next=%2Fpanel",
+  );
+
+  const adminResponse = await render("/admin");
+  assert.equal(adminResponse.status, 307);
+  assert.equal(
+    adminResponse.headers.get("location"),
+    "http://localhost/login?next=%2Fadmin",
+  );
+});

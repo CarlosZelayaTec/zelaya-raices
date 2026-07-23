@@ -1,0 +1,382 @@
+.page {
+  min-height: 100vh;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(196, 161, 93, 0.2), transparent 26%),
+    linear-gradient(135deg, #0c2d24 0%, #123d31 48%, #e9e1d3 48%, #f7f4ec 100%);
+}
+
+.shell {
+  display: grid;
+  width: min(1120px, 100%);
+  min-height: calc(100vh - 56px);
+  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.82fr);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 30px;
+  background: #ffffff;
+  box-shadow: 0 32px 90px rgba(7, 35, 27, 0.28);
+}
+
+.intro {
+  display: flex;
+  min-height: 680px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(34px, 5vw, 68px);
+  background:
+    linear-gradient(180deg, rgba(12, 45, 36, 0.2), rgba(12, 45, 36, 0.94)),
+    radial-gradient(circle at 75% 20%, rgba(196, 161, 93, 0.32), transparent 28%),
+    #123d31;
+  color: #f7f4ec;
+}
+
+.homeLink {
+  width: fit-content;
+  color: rgba(247, 244, 236, 0.78);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.homeLink:hover {
+  color: #ffffff;
+}
+
+.introEyebrow,
+.eyebrow {
+  margin: 0 0 12px;
+  color: #c4a15d;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.intro h2 {
+  max-width: 620px;
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(38px, 5vw, 62px);
+  font-weight: 620;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+}
+
+.intro h2 + p {
+  max-width: 560px;
+  margin: 24px 0 0;
+  color: rgba(247, 244, 236, 0.76);
+}
+
+.trustList {
+  display: grid;
+  gap: 16px;
+  margin: 46px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trustList li {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  align-items: center;
+  gap: 12px;
+  color: rgba(247, 244, 236, 0.86);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.trustList span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(196, 161, 93, 0.48);
+  border-radius: 50%;
+  color: #d8bf88;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(30px, 5vw, 62px);
+  background: #ffffff;
+}
+
+.brandWrap {
+  margin-bottom: 34px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 34px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f1eee6;
+}
+
+.tabs button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #68736d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tabs button[aria-selected="true"] {
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(18, 61, 49, 0.1);
+  color: #123d31;
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.heading {
+  margin-bottom: 4px;
+}
+
+.heading h1 {
+  margin: 0;
+  color: #17211d;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(34px, 4vw, 48px);
+  font-weight: 640;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.heading h1 + p {
+  margin: 12px 0 0;
+  color: #68736d;
+  font-size: 13px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field > span {
+  color: #33443d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.field input {
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid rgba(23, 33, 29, 0.17);
+  border-radius: 12px;
+  padding: 12px 15px;
+  background: #fbfaf7;
+  color: #17211d;
+  outline: 0;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.field input:focus {
+  border-color: #24705a;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(36, 112, 90, 0.12);
+}
+
+.field input::placeholder {
+  color: #9aa39f;
+}
+
+.submit {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 22px;
+  background: #123d31;
+  box-shadow: 0 12px 24px rgba(18, 61, 49, 0.2);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 850;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: #0c2d24;
+  transform: translateY(-1px);
+}
+
+.submit:disabled {
+  cursor: wait;
+  opacity: 0.66;
+}
+
+.textButton,
+.backButton {
+  width: fit-content;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #24705a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.textButton {
+  justify-self: end;
+  margin-top: -7px;
+}
+
+.backButton {
+  justify-self: center;
+  padding: 8px;
+}
+
+.hint,
+.legal {
+  margin: -10px 0 0;
+  color: #68736d;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.legal {
+  margin-top: -4px;
+  text-align: center;
+}
+
+.notice,
+.error,
+.success {
+  margin: 0 0 20px;
+  border-radius: 11px;
+  padding: 11px 13px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.notice {
+  border: 1px solid rgba(196, 161, 93, 0.34);
+  background: #fff8e8;
+  color: #785c27;
+}
+
+.error {
+  margin: 0;
+  border: 1px solid rgba(183, 96, 67, 0.32);
+  background: #fff2ed;
+  color: #8e422c;
+}
+
+.success {
+  margin: 0;
+  border: 1px solid rgba(36, 112, 90, 0.25);
+  background: #edf7f1;
+  color: #185843;
+}
+
+.support {
+  margin: 28px 0 0;
+  color: #7c8681;
+  font-size: 11px;
+  text-align: center;
+}
+
+.support a {
+  color: #24705a;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 18px;
+    background: #123d31;
+  }
+
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .intro {
+    min-height: auto;
+    padding: 36px;
+  }
+
+  .intro h2 {
+    max-width: 680px;
+    margin-top: 72px;
+  }
+
+  .trustList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .trustList li {
+    align-content: start;
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-height: 620px;
+  }
+}
+
+@media (max-width: 620px) {
+  .page {
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .shell {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .intro {
+    padding: 28px 22px 32px;
+  }
+
+  .intro h2 {
+    margin-top: 50px;
+    font-size: 38px;
+  }
+
+  .trustList {
+    grid-template-columns: 1fr;
+    margin-top: 32px;
+  }
+
+  .trustList li {
+    grid-template-columns: 38px 1fr;
+  }
+
+  .card {
+    min-height: 0;
+    padding: 38px 22px 50px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .submit {
+    transition: none;
+  }
+}

@@ -1298,7 +1298,276 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_initial_super_admin: { Args: { p_code: string }; Returns: boolean }
+      create_listing_draft: {
+        Args: {
+          p_bathrooms?: number
+          p_bedrooms?: number
+          p_construction_area?: number
+          p_construction_area_unit?: Database["public"]["Enums"]["area_unit"]
+          p_currency_code: Database["public"]["Enums"]["currency_code"]
+          p_description: string
+          p_land_area?: number
+          p_land_area_unit?: Database["public"]["Enums"]["area_unit"]
+          p_operation_type: Database["public"]["Enums"]["operation_type"]
+          p_organization_id: string
+          p_parking_spaces?: number
+          p_price_amount: number
+          p_price_on_request: boolean
+          p_price_period: Database["public"]["Enums"]["price_period"]
+          p_property_type: Database["public"]["Enums"]["property_type"]
+          p_slug: string
+          p_title: string
+          p_year_built?: number
+        }
+        Returns: {
+          availability_status: Database["public"]["Enums"]["availability_status"]
+          availability_updated_at: string
+          bathrooms: number | null
+          bedrooms: number | null
+          construction_area: number | null
+          construction_area_unit:
+            | Database["public"]["Enums"]["area_unit"]
+            | null
+          created_at: string
+          created_by: string
+          currency_code: Database["public"]["Enums"]["currency_code"]
+          description: string
+          featured_until: string | null
+          id: string
+          land_area: number | null
+          land_area_unit: Database["public"]["Enums"]["area_unit"] | null
+          last_price_update_at: string
+          operation_type: Database["public"]["Enums"]["operation_type"]
+          organization_id: string
+          parking_spaces: number | null
+          price_amount: number | null
+          price_on_request: boolean
+          price_period: Database["public"]["Enums"]["price_period"]
+          property_type: Database["public"]["Enums"]["property_type"]
+          publication_status: Database["public"]["Enums"]["publication_status"]
+          published_at: string | null
+          reports_count: number
+          slug: string
+          title: string
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+          version: number
+          view_count: number
+          year_built: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_organization: {
+        Args: {
+          p_description?: string
+          p_legal_name?: string
+          p_name: string
+          p_organization_type: Database["public"]["Enums"]["organization_type"]
+          p_slug: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          legal_name: string | null
+          logo_path: string | null
+          name: string
+          organization_type: Database["public"]["Enums"]["organization_type"]
+          public_email: string | null
+          public_phone: string | null
+          slug: string
+          status: Database["public"]["Enums"]["organization_status"]
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+          website_url: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_agent_dashboard: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      moderate_listing: {
+        Args: {
+          p_action: Database["public"]["Enums"]["moderation_action_type"]
+          p_expected_version: number
+          p_internal_notes?: string
+          p_listing_id: string
+          p_public_reason?: string
+        }
+        Returns: {
+          availability_status: Database["public"]["Enums"]["availability_status"]
+          availability_updated_at: string
+          bathrooms: number | null
+          bedrooms: number | null
+          construction_area: number | null
+          construction_area_unit:
+            | Database["public"]["Enums"]["area_unit"]
+            | null
+          created_at: string
+          created_by: string
+          currency_code: Database["public"]["Enums"]["currency_code"]
+          description: string
+          featured_until: string | null
+          id: string
+          land_area: number | null
+          land_area_unit: Database["public"]["Enums"]["area_unit"] | null
+          last_price_update_at: string
+          operation_type: Database["public"]["Enums"]["operation_type"]
+          organization_id: string
+          parking_spaces: number | null
+          price_amount: number | null
+          price_on_request: boolean
+          price_period: Database["public"]["Enums"]["price_period"]
+          property_type: Database["public"]["Enums"]["property_type"]
+          publication_status: Database["public"]["Enums"]["publication_status"]
+          published_at: string | null
+          reports_count: number
+          slug: string
+          title: string
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+          version: number
+          view_count: number
+          year_built: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      register_listing_media: {
+        Args: {
+          p_extension: string
+          p_listing_id: string
+          p_media_type: Database["public"]["Enums"]["listing_media_type"]
+          p_mime_type: string
+          p_size_bytes: number
+        }
+        Returns: {
+          alt_text: string | null
+          created_at: string
+          created_by: string
+          duration_seconds: number | null
+          height: number | null
+          id: string
+          is_primary: boolean
+          listing_id: string
+          media_type: Database["public"]["Enums"]["listing_media_type"]
+          mime_type: string
+          organization_id: string
+          processing_status: Database["public"]["Enums"]["media_processing_status"]
+          public_bucket: string | null
+          public_path: string | null
+          size_bytes: number
+          sort_order: number
+          source_bucket: string
+          source_path: string
+          updated_at: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listing_media"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_platform_staff_role: {
+        Args: {
+          p_profile_id: string
+          p_staff_role: Database["public"]["Enums"]["staff_role"]
+        }
+        Returns: {
+          account_status: Database["public"]["Enums"]["account_status"]
+          avatar_path: string | null
+          bio: string | null
+          created_at: string
+          display_name: string
+          id: string
+          public_phone: string | null
+          public_whatsapp: string | null
+          slug: string | null
+          staff_role: Database["public"]["Enums"]["staff_role"] | null
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_listing_for_review: {
+        Args: { p_expected_version: number; p_listing_id: string }
+        Returns: {
+          availability_status: Database["public"]["Enums"]["availability_status"]
+          availability_updated_at: string
+          bathrooms: number | null
+          bedrooms: number | null
+          construction_area: number | null
+          construction_area_unit:
+            | Database["public"]["Enums"]["area_unit"]
+            | null
+          created_at: string
+          created_by: string
+          currency_code: Database["public"]["Enums"]["currency_code"]
+          description: string
+          featured_until: string | null
+          id: string
+          land_area: number | null
+          land_area_unit: Database["public"]["Enums"]["area_unit"] | null
+          last_price_update_at: string
+          operation_type: Database["public"]["Enums"]["operation_type"]
+          organization_id: string
+          parking_spaces: number | null
+          price_amount: number | null
+          price_on_request: boolean
+          price_period: Database["public"]["Enums"]["price_period"]
+          property_type: Database["public"]["Enums"]["property_type"]
+          publication_status: Database["public"]["Enums"]["publication_status"]
+          published_at: string | null
+          reports_count: number
+          slug: string
+          title: string
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+          version: number
+          view_count: number
+          year_built: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       account_status: "active" | "suspended" | "disabled"

@@ -1,0 +1,239 @@
+import Link from "next/link";
+
+import styles from "@/shared/components/dashboard-content.module.css";
+import {
+  availabilityStatusLabels,
+  publicationStatusLabels,
+  publicationTone,
+} from "@/shared/lib/dashboard/labels";
+import { getPanelContext } from "@/shared/lib/dashboard/panel-context";
+import { formatHNL } from "@/shared/lib/formatters";
+import { createSupabaseServerClient } from "@/shared/lib/supabase/server";
+
+import { updateAvailabilityAction } from "./actions";
+
+export default async function PanelPropertiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ estado?: string }>;
+}) {
+  const context = await getPanelContext("/panel/propiedades");
+  const { estado } = await searchParams;
+  const organizationIds = context.organizations.map(
+    (organization) => organization.id,
+  );
+  const supabase = await createSupabaseServerClient();
+  const { data: listings } =
+    organizationIds.length > 0
+      ? await supabase
+          .from("listings")
+          .select(
+            "id,title,publication_status,availability_status,price_amount,price_on_request,currency_code,operation_type,property_type,view_count,updated_at",
+          )
+          .in("organization_id", organizationIds)
+          .order("updated_at", { ascending: false })
+      : { data: [] };
+
+  return (
+    <>
+      <header className={styles.pageHeader}>
+        <div>
+          <p className={styles.eyebrow}>Inventario inmobiliario</p>
+          <h1>Mis propiedades</h1>
+          <p>
+            Continúa borradores, revisa el estado de validación y mantén
+            actualizada la disponibilidad de cada inmueble.
+          </p>
+        </div>
+        {organizationIds.length > 0 ? (
+          <div className={styles.headerActions}>
+            <Link
+              className="button button--primary button--small"
+              href="/panel/propiedades/nueva"
+            >
+              + Nueva propiedad
+            </Link>
+          </div>
+        ) : null}
+      </header>
+
+      {estado ? (
+        <div className={styles.notice} role="status">
+          <span aria-hidden="true">i</span>
+          <div>
+            <strong>
+              {estado === "disponibilidad-actualizada"
+                ? "Disponibilidad actualizada"
+                : "No se pudo actualizar"}
+            </strong>
+            {estado === "disponibilidad-actualizada"
+              ? "El nuevo estado ya está guardado."
+              : "La propiedad puede estar en revisión o fuera de tu alcance."}
+          </div>
+        </div>
+      ) : null}
+
+      {organizationIds.length === 0 ? (
+        <section className={`${styles.panelCard} ${styles.emptyState}`}>
+          <div>
+            <span className={styles.emptyStateMark}>01</span>
+            <h2>Primero configura tu cuenta</h2>
+            <p>
+              Elige si publicarás como propietario, agencia o empresa. Solo
+              tomará un minuto.
+            </p>
+            <Link
+              className="button button--primary"
+              href="/panel/onboarding"
+            >
+              Configurar mi cuenta
+            </Link>
+          </div>
+        </section>
+      ) : listings && listings.length > 0 ? (
+        <section className={styles.panelCard}>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Propiedad</th>
+                  <th>Publicación</th>
+                  <th>Disponibilidad</th>
+                  <th>Precio</th>
+                  <th>Actividad</th>
+                  <th aria-label="Acciones" />
+                </tr>
+              </thead>
+              <tbody>
+                {listings.map((listing) => (
+                  <tr key={listing.id}>
+                    <td>
+                      <strong>{listing.title}</strong>
+                      <small>
+                        {listing.property_type === "land"
+                          ? "Terreno"
+                          : listing.property_type === "house"
+                            ? "Casa"
+                            : listing.property_type === "apartment"
+                              ? "Apartamento"
+                              : "Propiedad"}
+                        {" · "}
+                        {listing.operation_type === "sale"
+                          ? "Venta"
+                          : "Alquiler"}
+                      </small>
+                    </td>
+                    <td>
+                      <span
+                        className={styles.badge}
+                        data-tone={publicationTone(
+                          listing.publication_status,
+                        )}
+                      >
+                        {publicationStatusLabels[listing.publication_status]}
+                      </span>
+                    </td>
+                    <td>
+                      {listing.publication_status !== "pending_review" &&
+                      listing.publication_status !== "archived" ? (
+                        <form
+                          action={updateAvailabilityAction}
+                          className={styles.inlineActions}
+                        >
+                          <input
+                            name="listing_id"
+                            type="hidden"
+                            value={listing.id}
+                          />
+                          <select
+                            aria-label={`Disponibilidad de ${listing.title}`}
+                            className={styles.select}
+                            defaultValue={listing.availability_status}
+                            name="availability_status"
+                          >
+                            {Object.entries(availabilityStatusLabels).map(
+                              ([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                          <button
+                            className={styles.inlineButton}
+                            type="submit"
+                          >
+                            Guardar
+                          </button>
+                        </form>
+                      ) : (
+                        availabilityStatusLabels[
+                          listing.availability_status
+                        ]
+                      )}
+                    </td>
+                    <td>
+                      <strong>
+                        {listing.price_on_request
+                          ? "Consultar"
+                          : listing.currency_code === "HNL" &&
+                              listing.price_amount !== null
+                            ? formatHNL(Number(listing.price_amount))
+                            : `${listing.currency_code} ${Number(
+                                listing.price_amount ?? 0,
+                              ).toLocaleString("es-HN")}`}
+                      </strong>
+                    </td>
+                    <td>
+                      <strong>
+                        {Number(listing.view_count).toLocaleString("es-HN")}{" "}
+                        vistas
+                      </strong>
+                      <small>
+                        {new Intl.DateTimeFormat("es-HN", {
+                          dateStyle: "medium",
+                        }).format(new Date(listing.updated_at))}
+                      </small>
+                    </td>
+                    <td>
+                      <div className={styles.inlineActions}>
+                        {["draft", "rejected"].includes(
+                          listing.publication_status,
+                        ) ? (
+                          <span className={styles.inlineButton}>
+                            Edición disponible pronto
+                          </span>
+                        ) : (
+                          <span className={styles.inlineButton}>
+                            Ver estado
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : (
+        <section className={`${styles.panelCard} ${styles.emptyState}`}>
+          <div>
+            <span className={styles.emptyStateMark}>+</span>
+            <h2>Tu inventario está listo para comenzar</h2>
+            <p>
+              Crea un terreno, casa o apartamento. Podrás guardarlo como
+              borrador antes de enviarlo a revisión.
+            </p>
+            <Link
+              className="button button--primary"
+              href="/panel/propiedades/nueva"
+            >
+              Crear primera propiedad
+            </Link>
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
