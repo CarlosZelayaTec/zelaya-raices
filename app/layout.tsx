@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 
-const manrope = Manrope({
+const montserrat = Montserrat({
   variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
 });
@@ -39,9 +33,9 @@ export const metadata: Metadata = {
       "Compra o alquila con información clara, propiedades revisadas y datos actualizados.",
     images: [
       {
-        url: "/og.png",
-        width: 1733,
-        height: 909,
+        url: "/og-v2.png",
+        width: 1734,
+        height: 907,
         alt: "Zelaya Raíces — Propiedades confiables en Honduras",
       },
     ],
@@ -51,7 +45,7 @@ export const metadata: Metadata = {
     title: "Zelaya Raíces | Propiedades confiables en Honduras",
     description:
       "Compra o alquila con información clara, propiedades revisadas y datos actualizados.",
-    images: ["/og.png"],
+    images: ["/og-v2.png"],
   },
 };
 
@@ -62,9 +56,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es-HN">
-      <body className={`${manrope.variable} ${fraunces.variable}`}>
-        {children}
-      </body>
+      <body className={montserrat.variable}>{children}</body>
     </html>
   );
 }

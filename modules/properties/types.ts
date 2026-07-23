@@ -16,6 +16,7 @@ export type Property = {
   operation: "Venta" | "Alquiler";
   propertyType: string;
   price: number;
+  pricePeriod?: "monthly" | "nightly";
   bedrooms: number;
   bathrooms: number;
   area: number;

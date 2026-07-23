@@ -95,7 +95,10 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             </div>
             <div className="property-detail-header__price">
               <span>{property.operation}</span>
-              <strong>{formatHNL(property.price)}</strong>
+              <strong>
+                {formatHNL(property.price)}
+                {property.pricePeriod === "monthly" ? " / mes" : null}
+              </strong>
               <small>Precio actualizado {property.priceUpdatedAt}</small>
             </div>
           </header>

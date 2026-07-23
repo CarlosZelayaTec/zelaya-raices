@@ -5,7 +5,8 @@ const navigation = [
   { label: "Propiedades", href: "/propiedades" },
   { label: "Comprar", href: "/propiedades?operacion=venta" },
   { label: "Alquilar", href: "/propiedades?operacion=alquiler" },
-  { label: "Cómo verificamos", href: "/#confianza" },
+  { label: "Confianza", href: "/#confianza" },
+  { label: "Nosotros", href: "/#asesores" },
 ];
 
 export function SiteHeader() {

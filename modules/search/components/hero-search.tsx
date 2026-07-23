@@ -1,14 +1,47 @@
+"use client";
+
+import { useState } from "react";
+
+const priceOptions = {
+  venta: [
+    { value: "3000000", label: "L 3 millones" },
+    { value: "6000000", label: "L 6 millones" },
+    { value: "10000000", label: "L 10 millones" },
+    { value: "20000000", label: "L 20 millones" },
+  ],
+  alquiler: [
+    { value: "15000", label: "L 15,000 / mes" },
+    { value: "30000", label: "L 30,000 / mes" },
+    { value: "60000", label: "L 60,000 / mes" },
+    { value: "100000", label: "L 100,000 / mes" },
+  ],
+} as const;
+
 export function HeroSearch() {
+  const [operation, setOperation] = useState<keyof typeof priceOptions>("venta");
+
   return (
     <form className="hero-search" action="/propiedades" method="get">
       <fieldset className="operation-tabs">
         <legend className="sr-only">Tipo de operación</legend>
         <label>
-          <input defaultChecked name="operacion" type="radio" value="venta" />
+          <input
+            checked={operation === "venta"}
+            name="operacion"
+            onChange={() => setOperation("venta")}
+            type="radio"
+            value="venta"
+          />
           <span>Comprar</span>
         </label>
         <label>
-          <input name="operacion" type="radio" value="alquiler" />
+          <input
+            checked={operation === "alquiler"}
+            name="operacion"
+            onChange={() => setOperation("alquiler")}
+            type="radio"
+            value="alquiler"
+          />
           <span>Alquilar</span>
         </label>
       </fieldset>
@@ -17,7 +50,7 @@ export function HeroSearch() {
           <span>Ubicación</span>
           <input
             name="ubicacion"
-            placeholder="Tegucigalpa, San Pedro Sula, Roatán…"
+            placeholder="Ciudad, colonia o zona"
             type="search"
           />
         </label>
@@ -33,12 +66,13 @@ export function HeroSearch() {
         </label>
         <label className="search-field">
           <span>Precio máximo</span>
-          <select name="precio" defaultValue="">
+          <select key={operation} name="precioMax" defaultValue="">
             <option value="">Sin límite</option>
-            <option value="3000000">L 3 millones</option>
-            <option value="6000000">L 6 millones</option>
-            <option value="10000000">L 10 millones</option>
-            <option value="20000000">L 20 millones</option>
+            {priceOptions[operation].map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
         <button className="button button--accent hero-search__submit" type="submit">

@@ -29,20 +29,38 @@ export function PropertyCard({ property }: PropertyCardProps) {
         <h3>
           <Link href={`/propiedades/${property.slug}`}>{property.title}</Link>
         </h3>
-        <p className="property-card__price">{formatHNL(property.price)}</p>
+        <p className="property-card__price">
+          {formatHNL(property.price)}
+          {property.pricePeriod === "monthly" ? " / mes" : null}
+        </p>
         <dl className="property-facts" aria-label="Características principales">
-          <div>
-            <dt>Habitaciones</dt>
-            <dd>{property.bedrooms} hab.</dd>
-          </div>
-          <div>
-            <dt>Baños</dt>
-            <dd>{property.bathrooms} baños</dd>
-          </div>
+          {property.propertyType === "Terreno" ? (
+            <div>
+              <dt>Tipo</dt>
+              <dd>Terreno</dd>
+            </div>
+          ) : (
+            <>
+              <div>
+                <dt>Habitaciones</dt>
+                <dd>{property.bedrooms} hab.</dd>
+              </div>
+              <div>
+                <dt>Baños</dt>
+                <dd>{property.bathrooms} baños</dd>
+              </div>
+            </>
+          )}
           <div>
             <dt>Área</dt>
             <dd>{property.area} m²</dd>
           </div>
+          {property.propertyType === "Terreno" ? (
+            <div>
+              <dt>Operación</dt>
+              <dd>{property.operation}</dd>
+            </div>
+          ) : null}
         </dl>
         <div className="property-card__footer">
           <span>Precio actualizado {property.priceUpdatedAt}</span>
