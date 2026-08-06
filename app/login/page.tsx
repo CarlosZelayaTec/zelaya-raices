@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Brand } from "@/shared/components/brand";
+import { getAuthIdentity } from "@/shared/lib/auth/context";
 import { safeAfterSignInPath } from "@/shared/lib/auth/redirects";
 import { AuthForms, type AuthMode } from "./auth-forms";
 import styles from "./login.module.css";
@@ -50,7 +52,19 @@ function noticeFor(value: string | undefined): string | undefined {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
+  const state = firstValue(params.estado);
   const nextPath = safeAfterSignInPath(firstValue(params.next), "/panel");
+  const identity = await getAuthIdentity();
+
+  // An unavailable account is sent here by the panel guard; redirecting it
+  // immediately would create a loop between /login and /panel.
+  if (
+    identity &&
+    !identity.isAnonymous &&
+    state !== "cuenta-no-disponible"
+  ) {
+    redirect(nextPath);
+  }
 
   return (
     <main className={styles.page}>
@@ -92,7 +106,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <AuthForms
             initialMode={authMode(firstValue(params.modo))}
             nextPath={nextPath}
-            notice={noticeFor(firstValue(params.estado))}
+            notice={noticeFor(state)}
           />
           <p className={styles.support}>
             ¿Necesitas ayuda?{" "}

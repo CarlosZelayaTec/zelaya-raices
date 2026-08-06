@@ -1,12 +1,45 @@
 import Link from "next/link";
 import type { Property } from "../types";
-import { formatHNL } from "../../../shared/lib/formatters";
+import { formatCurrency } from "../../../shared/lib/formatters";
 
 type PropertyCardProps = {
   property: Property;
 };
 
+const availabilityLabels = {
+  available: "Disponible",
+  reserved: "Reservada",
+  sold: "Vendida",
+  rented: "Alquilada",
+  unavailable: "No disponible",
+} as const;
+
+const areaUnitLabels = {
+  acre: "acres",
+  manzana: "manzanas",
+  m2: "m²",
+  sqft: "pies²",
+  vara2: "varas²",
+} as const;
+
+function propertyPrice(property: Property) {
+  if (property.priceOnRequest || property.price === null) {
+    return "Precio a consultar";
+  }
+
+  const formatted = formatCurrency(
+    property.price,
+    property.currencyCode ?? "HNL",
+  );
+
+  if (property.pricePeriod === "monthly") return `${formatted} / mes`;
+  if (property.pricePeriod === "nightly") return `${formatted} / noche`;
+  return formatted;
+}
+
 export function PropertyCard({ property }: PropertyCardProps) {
+  const firstMedia = property.media?.[0];
+
   return (
     <article className="property-card">
       <Link
@@ -14,7 +47,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
         href={`/propiedades/${property.slug}`}
         aria-label={`Ver ${property.title}`}
       >
-        <img src={property.image} alt={property.title} loading="lazy" />
+        {firstMedia?.type === "video" ? (
+          <video
+            aria-label={`Video de ${property.title}`}
+            muted
+            playsInline
+            preload="metadata"
+            src={firstMedia.url}
+          />
+        ) : (
+          <img src={property.image} alt={property.title} loading="lazy" />
+        )}
         <span className="property-card__operation">{property.operation}</span>
         {property.verified ? (
           <span className="verification-badge verification-badge--floating">
@@ -26,12 +69,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
         <p className="property-card__location">
           {property.city} · {property.department}
         </p>
+        {property.availabilityStatus &&
+        property.availabilityStatus !== "available" ? (
+          <p className="property-card__availability">
+            {availabilityLabels[property.availabilityStatus]}
+          </p>
+        ) : null}
         <h3>
           <Link href={`/propiedades/${property.slug}`}>{property.title}</Link>
         </h3>
         <p className="property-card__price">
-          {formatHNL(property.price)}
-          {property.pricePeriod === "monthly" ? " / mes" : null}
+          {propertyPrice(property)}
         </p>
         <dl className="property-facts" aria-label="Características principales">
           {property.propertyType === "Terreno" ? (
@@ -43,17 +91,31 @@ export function PropertyCard({ property }: PropertyCardProps) {
             <>
               <div>
                 <dt>Habitaciones</dt>
-                <dd>{property.bedrooms} hab.</dd>
+                <dd>
+                  {property.bedrooms === null
+                    ? "Por confirmar"
+                    : `${property.bedrooms} hab.`}
+                </dd>
               </div>
               <div>
                 <dt>Baños</dt>
-                <dd>{property.bathrooms} baños</dd>
+                <dd>
+                  {property.bathrooms === null
+                    ? "Por confirmar"
+                    : `${property.bathrooms} baños`}
+                </dd>
               </div>
             </>
           )}
           <div>
             <dt>Área</dt>
-            <dd>{property.area} m²</dd>
+            <dd>
+              {property.area > 0
+                ? `${property.area.toLocaleString("es-HN")} ${
+                    areaUnitLabels[property.areaUnit ?? "m2"]
+                  }`
+                : "Por confirmar"}
+            </dd>
           </div>
           {property.propertyType === "Terreno" ? (
             <div>

@@ -711,6 +711,30 @@
   border: 1px solid var(--wizard-border);
   border-radius: 13px;
   background: #fff;
+  cursor: default;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.mediaCard[draggable="true"] {
+  cursor: grab;
+}
+
+.mediaCard[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.mediaCardDragging {
+  opacity: 0.48;
+  transform: scale(0.98);
+}
+
+.mediaCardDropTarget {
+  border-color: var(--wizard-green);
+  box-shadow: 0 0 0 3px rgba(18, 61, 49, 0.16);
 }
 
 .mediaCard > img,
@@ -742,7 +766,8 @@
   backdrop-filter: blur(8px);
 }
 
-.mediaStatus_uploading {
+.mediaStatus_uploading,
+.mediaStatus_removing {
   background: rgba(151, 111, 39, 0.9);
 }
 
@@ -770,8 +795,33 @@
 .mediaMeta {
   display: grid;
   min-width: 0;
-  gap: 1px;
+  gap: 3px;
   padding: 9px 10px 10px;
+}
+
+.mediaPosition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.mediaPosition > span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wizard-green-soft);
+  color: var(--wizard-green);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.mediaPosition > small {
+  color: var(--wizard-muted);
+  font-size: 8px;
+  font-weight: 750;
 }
 
 .mediaMeta strong {
@@ -782,14 +832,75 @@
   white-space: nowrap;
 }
 
-.mediaMeta span,
-.mediaMeta small {
+.mediaMeta > span,
+.mediaMeta > small {
   color: var(--wizard-muted);
   font-size: 8px;
 }
 
-.mediaMeta small {
+.mediaMeta > .mediaError {
   color: #943b2c;
+}
+
+.mediaControls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.mediaControls button {
+  display: inline-flex;
+  min-width: 28px;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--wizard-border);
+  border-radius: 8px;
+  padding: 4px 7px;
+  background: #fff;
+  color: var(--wizard-green);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.mediaControls button:hover:not(:disabled) {
+  border-color: var(--wizard-green);
+  background: var(--wizard-green-soft);
+}
+
+.mediaControls button:focus-visible {
+  outline: 3px solid var(--wizard-gold);
+  outline-offset: 2px;
+}
+
+.mediaControls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.mediaControls .coverButton {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.coverSelection {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: var(--wizard-green);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 850;
 }
 
 .reviewPanel {
@@ -1206,5 +1317,10 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation-duration: 1.8s;
+  }
+
+  .mediaCard,
+  .mediaControls button {
+    transition: none;
   }
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PropertyCard } from "../modules/properties/components/property-card";
-import { featuredProperties, properties } from "../modules/properties/data";
+import { getPublicProperties } from "../modules/properties/public-data.server";
 import { HeroSearch } from "../modules/search/components/hero-search";
 import { SiteFooter } from "../shared/components/site-footer";
 import { SiteHeader } from "../shared/components/site-header";
@@ -10,9 +10,11 @@ import { WhatsAppIcon } from "../shared/components/whatsapp-icon";
 export const metadata: Metadata = {
   title: "Compra y alquila propiedades verificadas en Honduras",
   description:
-    "Encuentra casas, apartamentos, terrenos y villas con ubicación confirmada, precios actualizados y anunciantes verificados en Honduras.",
+    "Encuentra casas, apartamentos, terrenos y villas con anuncios revisados, precios actualizados e información clara en Honduras.",
   alternates: { canonical: "/" },
 };
+
+export const dynamic = "force-dynamic";
 
 const markets = [
   {
@@ -44,13 +46,6 @@ const markets = [
 const heroImage =
   "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=88";
 
-const purchaseProperty =
-  properties.find((property) => property.operation === "Venta") ??
-  featuredProperties[0];
-const rentalProperty =
-  properties.find((property) => property.operation === "Alquiler") ??
-  featuredProperties[1];
-
 const whatsappMessage = encodeURIComponent(
   "Hola, visité zelayaraices.com y quisiera recibir ayuda para encontrar una propiedad.",
 );
@@ -62,7 +57,30 @@ const whatsappHref = whatsappNumber
   ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
   : `https://wa.me/?text=${whatsappMessage}`;
 
-export default function Home() {
+export default async function Home() {
+  const properties = await getPublicProperties();
+  const homepageProperties = properties
+    .filter(
+      (property) =>
+        property.status === "published" &&
+        property.availabilityStatus !== "unavailable" &&
+        (property.source === "supabase" || property.featured),
+    )
+    .slice(0, 3);
+  const purchaseProperty = properties.find(
+    (property) =>
+      property.operation === "Venta" &&
+      property.availabilityStatus !== "unavailable",
+  );
+  const rentalProperty = properties.find(
+    (property) =>
+      property.operation === "Alquiler" &&
+      property.availabilityStatus !== "unavailable",
+  );
+  const includesDemoProperties = homepageProperties.some(
+    (property) => property.source !== "supabase",
+  );
+
   return (
     <>
       <a className="skip-link" href="#contenido">
@@ -105,7 +123,7 @@ export default function Home() {
                 </span>
                 <span>
                   <strong>Confianza visible</strong>
-                  Propiedad, agente y datos revisados
+                  Anuncio y datos revisados
                 </span>
               </figcaption>
             </figure>
@@ -153,13 +171,16 @@ export default function Home() {
               </Link>
             </div>
             <div className="property-grid">
-              {featuredProperties.slice(0, 3).map((property) => (
+              {homepageProperties.map((property) => (
                 <PropertyCard property={property} key={property.slug} />
               ))}
             </div>
-            <p className="demo-note">
-              Propiedades de demostración para visualizar la experiencia inicial.
-            </p>
+            {includesDemoProperties ? (
+              <p className="demo-note">
+                Esta selección combina publicaciones reales con propiedades de
+                demostración mientras ampliamos el catálogo.
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -175,7 +196,11 @@ export default function Home() {
             </div>
             <div className="intent-grid">
               <article className="intent-card intent-card--buy">
-                <img src={purchaseProperty.image} alt="" loading="lazy" />
+                <img
+                  src={purchaseProperty?.image ?? heroImage}
+                  alt=""
+                  loading="lazy"
+                />
                 <span className="intent-card__overlay" />
                 <div className="intent-card__content">
                   <span className="intent-card__label">Para construir patrimonio</span>
@@ -193,7 +218,11 @@ export default function Home() {
                 </div>
               </article>
               <article className="intent-card intent-card--rent">
-                <img src={rentalProperty.image} alt="" loading="lazy" />
+                <img
+                  src={rentalProperty?.image ?? heroImage}
+                  alt=""
+                  loading="lazy"
+                />
                 <span className="intent-card__overlay" />
                 <div className="intent-card__content">
                   <span className="intent-card__label">Para tu próxima etapa</span>

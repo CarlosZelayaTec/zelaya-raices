@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+const REAL_LISTING_TITLE = /Terreno en venta - Residencial Villas del pinar/i;
+const REAL_LISTING_PATH =
+  "/propiedades/terreno-en-venta-residencial-villas-del-pinar-eb7b1ce3";
+
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${pathname}`);
@@ -43,19 +47,22 @@ test("renders the Zelaya Raíces public homepage", async () => {
   assert.match(html, /Abrir WhatsApp para consultar a Zelaya Raíces/);
   assert.match(html, /viewBox="0 0 24 24"/);
   assert.match(html, /href="\/propiedades"/);
+  assert.match(html, REAL_LISTING_TITLE);
+  assert.doesNotMatch(html, /propiedades de demostración/i);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
 });
 
-test("renders property results", async () => {
+test("renders only approved real property results", async () => {
   const response = await render("/propiedades");
   assert.equal(response.status, 200);
 
   const html = await response.text();
   assert.match(html, /Propiedades para vivir, invertir y crecer/);
-  assert.match(html, /6(?:<!-- -->|\s)*propiedades/);
-  assert.match(html, /Casa contemporánea en Lomas del Guijarro/);
-  assert.match(html, /Villa caribeña a pasos de West Bay/);
-  assert.match(html, /Apartamento amueblado en Lomas del Mayab/);
+  const countMatch = html.match(/(\d+)(?:<!-- -->|\s)*propiedad(?:es)?/);
+  assert.ok(countMatch, "the rendered catalog should expose its result count");
+  assert.ok(Number(countMatch[1]) >= 1, "the approved listing should be public");
+  assert.match(html, REAL_LISTING_TITLE);
+  assert.doesNotMatch(html, /Casa contemporánea en Lomas del Guijarro/);
 });
 
 test("separates properties for sale and rent", async () => {
@@ -63,8 +70,7 @@ test("separates properties for sale and rent", async () => {
   assert.equal(saleResponse.status, 200);
   const saleHtml = await saleResponse.text();
   assert.match(saleHtml, /propiedad para comprar en Honduras/);
-  assert.match(saleHtml, /Casa contemporánea en Lomas del Guijarro/);
-  assert.doesNotMatch(saleHtml, /Apartamento amueblado en Lomas del Mayab/);
+  assert.match(saleHtml, REAL_LISTING_TITLE);
 
   const rentResponse = await render(
     "/propiedades?operacion=alquiler&orden=precio-asc",
@@ -72,41 +78,43 @@ test("separates properties for sale and rent", async () => {
   assert.equal(rentResponse.status, 200);
   const rentHtml = await rentResponse.text();
   assert.match(rentHtml, /lugar para alquilar en Honduras/);
-  assert.match(rentHtml, /Apartamento amueblado en Lomas del Mayab/);
-  assert.match(rentHtml, /Terreno comercial en Valle de Ángeles/);
-  assert.match(rentHtml, /\/ mes/);
-  assert.doesNotMatch(rentHtml, /Casa contemporánea en Lomas del Guijarro/);
-  assert.ok(
-    rentHtml.indexOf("Terreno comercial en Valle de Ángeles") <
-      rentHtml.indexOf("Apartamento amueblado en Lomas del Mayab"),
-  );
+  assert.match(rentHtml, /No encontramos propiedades con esos filtros/);
+  assert.doesNotMatch(rentHtml, REAL_LISTING_TITLE);
 });
 
-test("normalizes accents and preserves canonical property filters", async () => {
+test("normalizes location filters for the approved listing", async () => {
   const response = await render(
-    "/propiedades?operacion=alquiler&ubicacion=Valle%20de%20Angeles&tipo=terreno&precio=30000",
+    "/propiedades?operacion=venta&ubicacion=Villas%20del%20Pinar&tipo=terreno",
   );
   assert.equal(response.status, 200);
 
   const html = await response.text();
   assert.match(html, /1(?:<!-- -->|\s)*propiedad/);
-  assert.match(html, /Terreno comercial en Valle de Ángeles/);
+  assert.match(html, REAL_LISTING_TITLE);
   assert.match(html, /name="precioMax"/);
-  assert.doesNotMatch(html, /Apartamento amueblado en Lomas del Mayab/);
 });
 
-test("renders a property detail with structured data", async () => {
-  const response = await render(
-    "/propiedades/casa-contemporanea-lomas-del-guijarro",
-  );
+test("renders the approved property with safe structured data", async () => {
+  const response = await render(REAL_LISTING_PATH);
   assert.equal(response.status, 200);
 
   const html = await response.text();
-  assert.match(html, /Casa contemporánea en Lomas del Guijarro/);
+  assert.match(html, REAL_LISTING_TITLE);
   assert.match(html, /Precio actualizado/);
   assert.match(html, /Resumen de confianza/);
   assert.match(html, /application\/ld\+json/);
-  assert.match(html, /SingleFamilyResidence/);
+  assert.match(html, /Landform/);
+  assert.doesNotMatch(html, /Información demostrativa/i);
+});
+
+test("renders ordered video media for an approved Supabase publication", async () => {
+  const response = await render(REAL_LISTING_PATH);
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, REAL_LISTING_TITLE);
+  assert.match(html, /<video\b/i);
+  assert.match(html, /registro público aprobado/i);
 });
 
 test("renders Supabase login without caching private responses", async () => {

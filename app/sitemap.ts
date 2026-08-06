@@ -1,13 +1,20 @@
 import type { MetadataRoute } from "next";
-import { properties } from "../modules/properties/data";
+import { getPublicProperties } from "../modules/properties/public-data.server";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const propertyPages = properties.map((property) => ({
-    url: `https://zelayaraices.com/propiedades/${property.slug}`,
-    lastModified: new Date("2026-07-22"),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+export const revalidate = 300;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const properties = await getPublicProperties();
+  const propertyPages = properties
+    .filter((property) => property.source === "supabase")
+    .map((property) => ({
+      url: `https://zelayaraices.com/propiedades/${property.slug}`,
+      lastModified: property.updatedAt
+        ? new Date(property.updatedAt)
+        : new Date("2026-07-22"),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
 
   return [
     {

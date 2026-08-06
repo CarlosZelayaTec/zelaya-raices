@@ -79,13 +79,16 @@ export async function moderateListingAction(formData: FormData) {
     }
   }
 
-  const { error } = await supabase.rpc("moderate_listing", {
-    p_action: action,
-    p_expected_version: version,
-    p_internal_notes: internalNotes || undefined,
-    p_listing_id: listingId,
-    p_public_reason: publicReason || undefined,
-  });
+  const { data: moderatedListing, error } = await supabase.rpc(
+    "moderate_listing",
+    {
+      p_action: action,
+      p_expected_version: version,
+      p_internal_notes: internalNotes || undefined,
+      p_listing_id: listingId,
+      p_public_reason: publicReason || undefined,
+    },
+  );
 
   if (error) {
     if (copiedPaths.length > 0) {
@@ -97,5 +100,11 @@ export async function moderateListingAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/admin/revision");
   revalidatePath("/panel/propiedades");
+  revalidatePath("/");
+  revalidatePath("/propiedades");
+  revalidatePath("/sitemap.xml");
+  if (moderatedListing?.slug) {
+    revalidatePath(`/propiedades/${moderatedListing.slug}`);
+  }
   redirect(`/admin/revision?estado=${action}`);
 }

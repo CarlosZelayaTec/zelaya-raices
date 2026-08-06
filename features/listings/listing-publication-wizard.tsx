@@ -2,6 +2,7 @@
 
 import {
   type ChangeEvent,
+  type DragEvent,
   type FormEvent,
   type ReactNode,
   useEffect,
@@ -14,16 +15,13 @@ import {
 import { createSupabaseBrowserClient } from "@/shared/lib/supabase/client";
 import type { Database } from "@/shared/lib/supabase/database.types";
 
+import { LocationMapPicker } from "./location-map-picker";
 import styles from "./listing-publication-wizard.module.css";
 import type { ListingPublicationWizardProps } from "./types";
 
 type ListingUpdate =
   Database["public"]["Tables"]["listings"]["Update"];
 type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
-type LocationInsert =
-  Database["public"]["Tables"]["listing_locations"]["Insert"];
-type LocationUpdate =
-  Database["public"]["Tables"]["listing_locations"]["Update"];
 type MediaRow = Database["public"]["Tables"]["listing_media"]["Row"];
 type PropertyType = "land" | "house" | "apartment";
 type OperationType = "sale" | "rent";
@@ -64,7 +62,12 @@ type WizardForm = {
 type FormField = keyof WizardForm | "media";
 type FormErrors = Partial<Record<FormField, string>>;
 type BusyAction = "saving" | "submitting" | null;
-type MediaStatus = "pending" | "uploading" | "uploaded" | "error";
+type MediaStatus =
+  | "pending"
+  | "uploading"
+  | "uploaded"
+  | "removing"
+  | "error";
 
 type DraftReference = {
   id: string;
@@ -177,6 +180,12 @@ const ALLOWED_MEDIA_TYPES = new Map<string, string>([
 const MAX_MEDIA_ITEMS = 12;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_FILE_LABEL = "50 MB";
+const HONDURAS_BOUNDS = {
+  east: -82.5,
+  north: 17.5,
+  south: 12.8,
+  west: -89.5,
+} as const;
 
 const DEFAULT_FORM: WizardForm = {
   organizationId: "",
@@ -269,6 +278,14 @@ function getRpcRow<T>(data: unknown, label: string) {
   return row as T;
 }
 
+function getRpcRows<T>(data: unknown, label: string) {
+  if (!Array.isArray(data)) {
+    throw new Error(`El servidor no devolvió ${label}.`);
+  }
+
+  return data as T[];
+}
+
 function presentError(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
 
@@ -335,10 +352,13 @@ export function ListingPublicationWizard({
   const [successMessage, setSuccessMessage] = useState("");
   const [draft, setDraft] = useState<DraftReference | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
+  const [dragOverMediaId, setDragOverMediaId] = useState<string | null>(null);
+  const [removingMediaId, setRemovingMediaId] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  const isBusy = busyAction !== null;
+  const isBusy = busyAction !== null || removingMediaId !== null;
   const isSubmitted = draft?.publicationStatus === "pending_review";
   const selectedOrganization = organizations.find(
     ({ id }) => id === form.organizationId,
@@ -349,6 +369,9 @@ export function ListingPublicationWizard({
   const pendingMediaCount = mediaItems.filter(
     ({ status }) => status !== "uploaded",
   ).length;
+  const primaryMediaLocalId = mediaItems.find(
+    ({ kind }) => kind === "image",
+  )?.localId;
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -376,6 +399,43 @@ export function ListingPublicationWizard({
   ) {
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
+    setGlobalError("");
+    setSuccessMessage("");
+    setIsDirty(true);
+  }
+
+  function updateMapCoordinates(latitude: string, longitude: string) {
+    setForm((current) => ({ ...current, latitude, longitude }));
+    setErrors((current) => ({
+      ...current,
+      latitude: undefined,
+      longitude: undefined,
+    }));
+    setGlobalError("");
+    setSuccessMessage("");
+    setIsDirty(true);
+  }
+
+  function applyMapLocationDetails(
+    details: Partial<
+      Pick<
+        WizardForm,
+        "city" | "department" | "municipality" | "zone"
+      >
+    >,
+  ) {
+    setForm((current) => ({
+      ...current,
+      city: details.city?.trim() || current.city,
+      department: details.department?.trim() || current.department,
+      municipality: details.municipality?.trim() || current.municipality,
+      zone: details.zone?.trim() || current.zone,
+    }));
+    setErrors((current) => ({
+      ...current,
+      department: undefined,
+      municipality: undefined,
+    }));
     setGlobalError("");
     setSuccessMessage("");
     setIsDirty(true);
@@ -498,12 +558,20 @@ export function ListingPublicationWizard({
         nextErrors.municipality = "Ingresa el municipio.";
       }
 
-      if (latitude === null || latitude < -90 || latitude > 90) {
-        nextErrors.latitude = "Ingresa una latitud entre -90 y 90.";
+      if (
+        latitude === null ||
+        latitude < HONDURAS_BOUNDS.south ||
+        latitude > HONDURAS_BOUNDS.north
+      ) {
+        nextErrors.latitude = "Selecciona una latitud ubicada en Honduras.";
       }
 
-      if (longitude === null || longitude < -180 || longitude > 180) {
-        nextErrors.longitude = "Ingresa una longitud entre -180 y 180.";
+      if (
+        longitude === null ||
+        longitude < HONDURAS_BOUNDS.west ||
+        longitude > HONDURAS_BOUNDS.east
+      ) {
+        nextErrors.longitude = "Selecciona una longitud ubicada en Honduras.";
       }
     }
 
@@ -639,35 +707,27 @@ export function ListingPublicationWizard({
     };
   }
 
-  function buildLocationInsert(listingId: string): LocationInsert {
+  function buildLocationArgs(listingId: string) {
     return {
-      listing_id: listingId,
-      organization_id: form.organizationId,
-      country_code: "HN",
-      department: form.department.trim(),
-      municipality: form.municipality.trim(),
-      city: form.city.trim() || null,
-      zone: form.zone.trim() || null,
-      visible_address: form.visibleAddress.trim() || null,
-      public_latitude: Number(form.latitude),
-      public_longitude: Number(form.longitude),
-      public_geog: null,
-      precision: form.precision,
+      p_city: form.city.trim() || undefined,
+      p_department: form.department.trim(),
+      p_exact_latitude: Number(form.latitude),
+      p_exact_longitude: Number(form.longitude),
+      p_listing_id: listingId,
+      p_municipality: form.municipality.trim(),
+      p_organization_id: form.organizationId,
+      p_precision: form.precision,
+      p_private_address: form.visibleAddress.trim() || undefined,
+      p_zone: form.zone.trim() || undefined,
     };
   }
 
-  function buildLocationUpdate(): LocationUpdate {
-    return {
-      country_code: "HN",
-      department: form.department.trim(),
-      municipality: form.municipality.trim(),
-      city: form.city.trim() || null,
-      zone: form.zone.trim() || null,
-      visible_address: form.visibleAddress.trim() || null,
-      public_latitude: Number(form.latitude),
-      public_longitude: Number(form.longitude),
-      precision: form.precision,
-    };
+  async function saveDraftLocation(listingId: string) {
+    return invokePublicRpc<{ saved_listing_id: string }>(
+      "save_listing_location",
+      buildLocationArgs(listingId),
+      "la ubicación protegida",
+    );
   }
 
   async function invokePublicRpc<T>(
@@ -682,6 +742,18 @@ export function ListingPublicationWizard({
     return getRpcRow<T>(data, resultLabel);
   }
 
+  async function invokePublicRpcRows<T>(
+    functionName: string,
+    args: Record<string, unknown>,
+    resultLabel: string,
+  ) {
+    const invokeRpc = supabase.rpc.bind(supabase) as unknown as RpcInvoker;
+    const { data, error } = await invokeRpc(functionName, args);
+
+    if (error) throw error;
+    return getRpcRows<T>(data, resultLabel);
+  }
+
   async function createDraft() {
     const slug = createDraftSlug(form.title);
     const insertedListing = await invokePublicRpc<ListingRow>(
@@ -694,11 +766,9 @@ export function ListingPublicationWizard({
       throw new Error("El servidor creó el anuncio en un estado inesperado.");
     }
 
-    const { error: locationError } = await supabase
-      .from("listing_locations")
-      .insert(buildLocationInsert(insertedListing.id));
-
-    if (locationError) {
+    try {
+      await saveDraftLocation(insertedListing.id);
+    } catch {
       await supabase
         .from("listings")
         .delete()
@@ -735,23 +805,7 @@ export function ListingPublicationWizard({
       throw listingError ?? new Error("No se pudo actualizar el borrador.");
     }
 
-    const { data: updatedLocation, error: locationError } = await supabase
-      .from("listing_locations")
-      .update(buildLocationUpdate())
-      .eq("listing_id", currentDraft.id)
-      .eq("organization_id", form.organizationId)
-      .select("listing_id")
-      .maybeSingle();
-
-    if (locationError) throw locationError;
-
-    if (!updatedLocation) {
-      const { error: insertLocationError } = await supabase
-        .from("listing_locations")
-        .insert(buildLocationInsert(currentDraft.id));
-
-      if (insertLocationError) throw insertLocationError;
-    }
+    await saveDraftLocation(currentDraft.id);
 
     if (updatedListing.publication_status !== "draft") {
       throw new Error("El anuncio ya no está disponible como borrador.");
@@ -787,13 +841,11 @@ export function ListingPublicationWizard({
   }
 
   async function uploadPendingMedia(listingId: string) {
-    const pendingItems = mediaItems
-      .filter(({ status }) => status !== "uploaded")
-      .sort((left, right) => {
-        if (left.kind === right.kind) return 0;
-        return left.kind === "image" ? -1 : 1;
-      });
-    if (pendingItems.length === 0) return;
+    const pendingItems = mediaItems.filter(
+      ({ status }) => status !== "uploaded",
+    );
+    const registeredByLocalId = new Map<string, MediaRow>();
+    if (pendingItems.length === 0) return registeredByLocalId;
 
     for (const [index, item] of pendingItems.entries()) {
       const extension = ALLOWED_MEDIA_TYPES.get(item.file.type);
@@ -805,43 +857,57 @@ export function ListingPublicationWizard({
         throw new Error(`El archivo “${item.file.name}” no es compatible.`);
       }
 
-      setStatusMessage(
-        `Registrando archivo ${index + 1} de ${pendingItems.length}…`,
-      );
-      setMediaStatus(item.localId, { status: "uploading", error: undefined });
+      let registeredMedia: MediaRow | undefined;
 
-      const registeredMedia = await invokePublicRpc<MediaRow>(
-        "register_listing_media",
-        {
-          p_listing_id: listingId,
-          p_media_type: item.kind,
-          p_mime_type: item.file.type,
-          p_size_bytes: item.file.size,
-          p_extension: extension,
-        },
-        "el registro de multimedia",
-      );
-
-      setStatusMessage(
-        `Subiendo archivo ${index + 1} de ${pendingItems.length}…`,
-      );
-      const { error: uploadError } = await supabase.storage
-        .from("listing-drafts")
-        .upload(registeredMedia.source_path, item.file, {
-          cacheControl: "3600",
-          contentType: item.file.type,
-          upsert: false,
+      try {
+        setStatusMessage(
+          `Registrando archivo ${index + 1} de ${pendingItems.length}…`,
+        );
+        setMediaStatus(item.localId, {
+          status: "uploading",
+          error: undefined,
         });
 
-      if (uploadError) {
-        await supabase
-          .from("listing_media")
-          .delete()
-          .eq("id", registeredMedia.id)
-          .eq("listing_id", listingId);
+        registeredMedia = await invokePublicRpc<MediaRow>(
+          "register_listing_media",
+          {
+            p_listing_id: listingId,
+            p_media_type: item.kind,
+            p_mime_type: item.file.type,
+            p_size_bytes: item.file.size,
+            p_extension: extension,
+            p_media_id: item.localId,
+          },
+          "el registro de multimedia",
+        );
+
+        setMediaStatus(item.localId, {
+          status: "uploading",
+          sourcePath: registeredMedia.source_path,
+          recordId: registeredMedia.id,
+          isPrimary: registeredMedia.is_primary,
+          error: undefined,
+        });
+        setStatusMessage(
+          `Subiendo archivo ${index + 1} de ${pendingItems.length}…`,
+        );
+        const { error: uploadError } = await supabase.storage
+          .from("listing-drafts")
+          .upload(registeredMedia.source_path, item.file, {
+            cacheControl: "3600",
+            contentType: item.file.type,
+            // A retry overwrites only this user's deterministic object path.
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+      } catch {
         setMediaStatus(item.localId, {
           status: "error",
           error: "No se pudo subir.",
+          sourcePath: registeredMedia?.source_path ?? item.sourcePath,
+          recordId: registeredMedia?.id ?? item.recordId,
+          isPrimary: registeredMedia?.is_primary ?? item.isPrimary,
         });
         throw new Error(`No se pudo subir “${item.file.name}”.`);
       }
@@ -853,7 +919,58 @@ export function ListingPublicationWizard({
         isPrimary: registeredMedia.is_primary,
         error: undefined,
       });
+      registeredByLocalId.set(item.localId, registeredMedia);
     }
+
+    return registeredByLocalId;
+  }
+
+  async function persistMediaOrder(
+    listingId: string,
+    registeredByLocalId: ReadonlyMap<string, MediaRow>,
+  ) {
+    if (mediaItems.length === 0) return;
+
+    const orderedIds = mediaItems.map(
+      (item) => item.recordId ?? registeredByLocalId.get(item.localId)?.id,
+    );
+
+    if (orderedIds.some((id) => !id)) {
+      throw new Error(
+        "No se pudo confirmar el orden de todos los archivos multimedia.",
+      );
+    }
+
+    setStatusMessage("Guardando el orden de la multimedia…");
+    const organizedMedia = await invokePublicRpcRows<MediaRow>(
+      "organize_listing_media",
+      {
+        p_listing_id: listingId,
+        p_ordered_ids: orderedIds as string[],
+      },
+      "la multimedia ordenada",
+    );
+    const organizedById = new Map(
+      organizedMedia.map((media) => [media.id, media]),
+    );
+
+    setMediaItems((current) =>
+      current.map((item) => {
+        const recordId =
+          item.recordId ?? registeredByLocalId.get(item.localId)?.id;
+        const organized = recordId ? organizedById.get(recordId) : undefined;
+
+        return organized
+          ? {
+              ...item,
+              isPrimary: organized.is_primary,
+              recordId: organized.id,
+              sourcePath: organized.source_path,
+              status: "uploaded",
+            }
+          : item;
+      }),
+    );
   }
 
   async function handleSaveDraft() {
@@ -866,7 +983,8 @@ export function ListingPublicationWizard({
 
     try {
       const reference = await persistDraft();
-      await uploadPendingMedia(reference.id);
+      const registeredMedia = await uploadPendingMedia(reference.id);
+      await persistMediaOrder(reference.id, registeredMedia);
 
       const savedAt = new Date();
       setLastSavedAt(savedAt);
@@ -913,7 +1031,8 @@ export function ListingPublicationWizard({
 
     try {
       const reference = await persistDraft();
-      await uploadPendingMedia(reference.id);
+      const registeredMedia = await uploadPendingMedia(reference.id);
+      await persistMediaOrder(reference.id, registeredMedia);
 
       setStatusMessage("Enviando a revisión…");
       const submittedListing = await submitForReview(reference);
@@ -937,6 +1056,127 @@ export function ListingPublicationWizard({
     } finally {
       setBusyAction(null);
     }
+  }
+
+  function markMediaArrangementChanged() {
+    setErrors((current) => ({ ...current, media: undefined }));
+    setGlobalError("");
+    setSuccessMessage("");
+    setIsDirty(true);
+  }
+
+  function moveMediaByOffset(localId: string, offset: -1 | 1) {
+    if (isBusy || isSubmitted) return;
+
+    setMediaItems((current) => {
+      const sourceIndex = current.findIndex(
+        (item) => item.localId === localId,
+      );
+      const targetIndex = sourceIndex + offset;
+
+      if (
+        sourceIndex < 0 ||
+        targetIndex < 0 ||
+        targetIndex >= current.length
+      ) {
+        return current;
+      }
+
+      const next = [...current];
+      [next[sourceIndex], next[targetIndex]] = [
+        next[targetIndex],
+        next[sourceIndex],
+      ];
+      return next;
+    });
+    markMediaArrangementChanged();
+  }
+
+  function moveMediaToPosition(sourceId: string, targetId: string) {
+    if (isBusy || isSubmitted || sourceId === targetId) return;
+
+    setMediaItems((current) => {
+      const sourceIndex = current.findIndex(
+        (item) => item.localId === sourceId,
+      );
+      const targetIndex = current.findIndex(
+        (item) => item.localId === targetId,
+      );
+
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+
+      const next = [...current];
+      const [movedItem] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, movedItem);
+      return next;
+    });
+    markMediaArrangementChanged();
+  }
+
+  function makeMediaCover(localId: string) {
+    if (isBusy || isSubmitted) return;
+
+    setMediaItems((current) => {
+      const sourceIndex = current.findIndex(
+        (item) => item.localId === localId,
+      );
+      const sourceItem = current[sourceIndex];
+
+      if (!sourceItem || sourceItem.kind !== "image") return current;
+
+      const next = current.filter((item) => item.localId !== localId);
+      const firstImageIndex = next.findIndex(({ kind }) => kind === "image");
+      next.splice(
+        firstImageIndex === -1 ? next.length : firstImageIndex,
+        0,
+        sourceItem,
+      );
+      return next;
+    });
+    markMediaArrangementChanged();
+  }
+
+  function handleMediaDragStart(
+    event: DragEvent<HTMLLIElement>,
+    localId: string,
+  ) {
+    if (isBusy || isSubmitted) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", localId);
+    setDraggedMediaId(localId);
+  }
+
+  function handleMediaDragOver(
+    event: DragEvent<HTMLLIElement>,
+    localId: string,
+  ) {
+    if (isBusy || isSubmitted) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverMediaId(localId);
+  }
+
+  function handleMediaDrop(
+    event: DragEvent<HTMLLIElement>,
+    targetId: string,
+  ) {
+    event.preventDefault();
+    const sourceId =
+      event.dataTransfer.getData("text/plain") || draggedMediaId;
+
+    if (sourceId) moveMediaToPosition(sourceId, targetId);
+    setDraggedMediaId(null);
+    setDragOverMediaId(null);
+  }
+
+  function handleMediaDragEnd() {
+    setDraggedMediaId(null);
+    setDragOverMediaId(null);
   }
 
   function handleMediaSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -993,19 +1233,76 @@ export function ListingPublicationWizard({
     setIsDirty(true);
   }
 
-  function removePendingMedia(localId: string) {
+  async function removePendingMedia(localId: string) {
     const item = mediaItems.find((candidate) => candidate.localId === localId);
-    if (!item || item.status === "uploaded" || item.status === "uploading") {
+    if (
+      !item ||
+      isBusy ||
+      item.status === "uploading" ||
+      item.status === "removing"
+    ) {
       return;
     }
 
-    URL.revokeObjectURL(item.previewUrl);
-    previewUrlsRef.current.delete(item.previewUrl);
-    setMediaItems((current) =>
-      current.filter((candidate) => candidate.localId !== localId),
-    );
-    setErrors((current) => ({ ...current, media: undefined }));
-    setIsDirty(true);
+    setRemovingMediaId(localId);
+    setMediaStatus(localId, { status: "removing", error: undefined });
+    setGlobalError("");
+
+    try {
+      if (draft) {
+        const recordId = item.recordId ?? item.localId;
+        const { data: storedMedia, error: lookupError } = await supabase
+          .from("listing_media")
+          .select("id, source_path")
+          .eq("id", recordId)
+          .eq("listing_id", draft.id)
+          .maybeSingle();
+
+        if (lookupError) throw lookupError;
+
+        const sourcePath = storedMedia?.source_path ?? item.sourcePath;
+        if (storedMedia && sourcePath) {
+          const { error: storageError } = await supabase.storage
+            .from("listing-drafts")
+            .remove([sourcePath]);
+          if (storageError) throw storageError;
+        }
+
+        if (storedMedia) {
+          const { data: deletedMedia, error: deleteError } = await supabase
+            .from("listing_media")
+            .delete()
+            .eq("id", recordId)
+            .eq("listing_id", draft.id)
+            .select("id")
+            .maybeSingle();
+
+          if (deleteError) throw deleteError;
+          if (!deletedMedia) {
+            throw new Error("No se confirmó la eliminación de multimedia.");
+          }
+        }
+      }
+
+      URL.revokeObjectURL(item.previewUrl);
+      previewUrlsRef.current.delete(item.previewUrl);
+      setMediaItems((current) =>
+        current.filter((candidate) => candidate.localId !== localId),
+      );
+      setErrors((current) => ({ ...current, media: undefined }));
+      setSuccessMessage("");
+      setIsDirty(true);
+    } catch {
+      setMediaStatus(localId, {
+        status: "error",
+        error: "No se pudo quitar. Inténtalo de nuevo.",
+      });
+      setGlobalError(
+        "No pudimos quitar ese archivo sin dejar datos incompletos. Inténtalo de nuevo.",
+      );
+    } finally {
+      setRemovingMediaId(null);
+    }
   }
 
   function renderStep() {
@@ -1378,11 +1675,19 @@ export function ListingPublicationWizard({
             <div>
               <strong>Protege la ubicación exacta</strong>
               <p>
-                Este punto será público. Usa una ubicación aproximada; la
-                dirección privada se gestiona por separado.
+                El punto que elijas se guarda de forma privada. Al público le
+                mostraremos únicamente una referencia general de la zona.
               </p>
             </div>
           </div>
+
+          <LocationMapPicker
+            disabled={isBusy || isSubmitted}
+            latitude={form.latitude}
+            longitude={form.longitude}
+            onCoordinatesChange={updateMapCoordinates}
+            onLocationDetailsChange={applyMapLocationDetails}
+          />
 
           <div className={styles.formGridTwo}>
             <TextField
@@ -1424,27 +1729,28 @@ export function ListingPublicationWizard({
           <TextField
             disabled={isBusy}
             id={fieldId("visibleAddress")}
-            label="Dirección visible"
+            label="Dirección exacta o indicaciones privadas"
             maxLength={500}
             onChange={(value) => updateField("visibleAddress", value)}
-            placeholder="Referencia general sin número de casa ni datos privados"
+            placeholder="Ej. casa 14, portón azul; solo la verá el equipo autorizado"
             value={form.visibleAddress}
           />
 
           <fieldset className={styles.subsection}>
-            <legend>Coordenadas públicas</legend>
+            <legend>Punto exacto protegido</legend>
             <p className={styles.subsectionCopy}>
-              Copia las coordenadas de un punto cercano a la propiedad. La
-              integración visual con Mapbox puede conectarse después.
+              El mapa completa estos valores privados automáticamente. También
+              puedes corregirlos manualmente; nunca publicaremos los seis
+              decimales exactos.
             </p>
             <div className={styles.formGridThree}>
               <NumberField
                 disabled={isBusy}
                 error={errors.latitude}
                 id={fieldId("latitude")}
-                label="Latitud *"
-                max="90"
-                min="-90"
+                label="Latitud seleccionada *"
+                max={String(HONDURAS_BOUNDS.north)}
+                min={String(HONDURAS_BOUNDS.south)}
                 onChange={(value) => updateField("latitude", value)}
                 placeholder="14.0723"
                 step="0.000001"
@@ -1454,16 +1760,16 @@ export function ListingPublicationWizard({
                 disabled={isBusy}
                 error={errors.longitude}
                 id={fieldId("longitude")}
-                label="Longitud *"
-                max="180"
-                min="-180"
+                label="Longitud seleccionada *"
+                max={String(HONDURAS_BOUNDS.east)}
+                min={String(HONDURAS_BOUNDS.west)}
                 onChange={(value) => updateField("longitude", value)}
                 placeholder="-87.1921"
                 step="0.000001"
                 value={form.longitude}
               />
               <div className={styles.field}>
-                <label htmlFor={fieldId("precision")}>Precisión pública</label>
+                <label htmlFor={fieldId("precision")}>Referencia pública</label>
                 <select
                   disabled={isBusy}
                   id={fieldId("precision")}
@@ -1493,7 +1799,8 @@ export function ListingPublicationWizard({
               <h3>Fotografías y videos</h3>
               <p>
                 Hasta {MAX_MEDIA_ITEMS} archivos, máximo {MAX_FILE_LABEL} cada
-                uno. La primera fotografía será la portada.
+                uno. Arrástralos para ordenar: el primer archivo se verá
+                primero y la primera fotografía será la portada.
               </p>
             </div>
             <span>
@@ -1514,7 +1821,9 @@ export function ListingPublicationWizard({
                 errors.media ? fieldErrorId("media") : `${fieldId("media")}-hint`
               }
               aria-invalid={Boolean(errors.media)}
-              disabled={isBusy || mediaItems.length >= MAX_MEDIA_ITEMS}
+              disabled={
+                isBusy || isSubmitted || mediaItems.length >= MAX_MEDIA_ITEMS
+              }
               id={fieldId("media")}
               multiple
               onChange={handleMediaSelection}
@@ -1532,54 +1841,128 @@ export function ListingPublicationWizard({
 
           {mediaItems.length > 0 ? (
             <ul className={styles.mediaGrid} aria-label="Multimedia seleccionada">
-              {mediaItems.map((item) => (
-                <li className={styles.mediaCard} key={item.localId}>
-                  {item.kind === "image" ? (
-                    // The source is a local object URL chosen by the user.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt="" src={item.previewUrl} />
-                  ) : (
-                    <video
-                      aria-label={`Vista previa de ${item.file.name}`}
-                      muted
-                      playsInline
-                      preload="metadata"
-                      src={item.previewUrl}
-                    />
-                  )}
-                  <div className={styles.mediaOverlay}>
-                    <span
-                      className={classNames(
-                        styles.mediaStatus,
-                        styles[`mediaStatus_${item.status}`],
-                      )}
-                    >
-                      {item.status === "pending" && "Pendiente"}
-                      {item.status === "uploading" && "Subiendo…"}
-                      {item.status === "uploaded" &&
-                        (item.isPrimary ? "Portada" : "Guardado")}
-                      {item.status === "error" && "Reintentar"}
-                    </span>
-                    {item.status !== "uploaded" &&
-                    item.status !== "uploading" ? (
-                      <button
-                        aria-label={`Quitar ${item.file.name}`}
-                        className={styles.removeMedia}
-                        disabled={isBusy}
-                        onClick={() => removePendingMedia(item.localId)}
-                        type="button"
+              {mediaItems.map((item, index) => {
+                const isCover = item.localId === primaryMediaLocalId;
+
+                return (
+                  <li
+                    className={classNames(
+                      styles.mediaCard,
+                      draggedMediaId === item.localId &&
+                        styles.mediaCardDragging,
+                      dragOverMediaId === item.localId &&
+                        draggedMediaId !== item.localId &&
+                        styles.mediaCardDropTarget,
+                    )}
+                    data-position={index + 1}
+                    draggable={!isBusy && !isSubmitted && mediaItems.length > 1}
+                    key={item.localId}
+                    onDragEnd={handleMediaDragEnd}
+                    onDragOver={(event) =>
+                      handleMediaDragOver(event, item.localId)
+                    }
+                    onDragStart={(event) =>
+                      handleMediaDragStart(event, item.localId)
+                    }
+                    onDrop={(event) => handleMediaDrop(event, item.localId)}
+                  >
+                    {item.kind === "image" ? (
+                      // The source is a local object URL chosen by the user.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img alt="" src={item.previewUrl} />
+                    ) : (
+                      <video
+                        aria-label={`Vista previa de ${item.file.name}`}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        src={item.previewUrl}
+                      />
+                    )}
+                    <div className={styles.mediaOverlay}>
+                      <span
+                        className={classNames(
+                          styles.mediaStatus,
+                          styles[`mediaStatus_${item.status}`],
+                        )}
                       >
-                        ×
-                      </button>
-                    ) : null}
-                  </div>
-                  <div className={styles.mediaMeta}>
-                    <strong title={item.file.name}>{item.file.name}</strong>
-                    <span>{(item.file.size / 1024 / 1024).toFixed(1)} MB</span>
-                    {item.error ? <small>{item.error}</small> : null}
-                  </div>
-                </li>
-              ))}
+                        {item.status === "pending" &&
+                          (isCover ? "Portada al guardar" : "Pendiente")}
+                        {item.status === "uploading" && "Subiendo…"}
+                        {item.status === "removing" && "Quitando…"}
+                        {item.status === "uploaded" &&
+                          (isCover ? "Portada" : "Guardado")}
+                        {item.status === "error" && "Reintentar"}
+                      </span>
+                      {item.status !== "uploading" &&
+                      item.status !== "removing" ? (
+                        <button
+                          aria-label={`Quitar ${item.file.name}`}
+                          className={styles.removeMedia}
+                          disabled={isBusy || isSubmitted}
+                          onClick={() => void removePendingMedia(item.localId)}
+                          type="button"
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className={styles.mediaMeta}>
+                      <div className={styles.mediaPosition}>
+                        <span>{index + 1}</span>
+                        <small>
+                          {index === 0 ? "Se verá primero" : "Orden de galería"}
+                        </small>
+                      </div>
+                      <strong title={item.file.name}>{item.file.name}</strong>
+                      <span>{(item.file.size / 1024 / 1024).toFixed(1)} MB</span>
+                      {item.error ? (
+                        <small className={styles.mediaError}>{item.error}</small>
+                      ) : null}
+                      <div
+                        className={styles.mediaControls}
+                        aria-label={`Orden de ${item.file.name}`}
+                        role="group"
+                      >
+                        <button
+                          aria-label={`Mover ${item.file.name} antes`}
+                          disabled={isBusy || isSubmitted || index === 0}
+                          onClick={() => moveMediaByOffset(item.localId, -1)}
+                          title="Mover antes"
+                          type="button"
+                        >
+                          ←
+                        </button>
+                        <button
+                          aria-label={`Mover ${item.file.name} después`}
+                          disabled={
+                            isBusy ||
+                            isSubmitted ||
+                            index === mediaItems.length - 1
+                          }
+                          onClick={() => moveMediaByOffset(item.localId, 1)}
+                          title="Mover después"
+                          type="button"
+                        >
+                          →
+                        </button>
+                        {isCover ? (
+                          <span className={styles.coverSelection}>Portada</span>
+                        ) : item.kind === "image" ? (
+                          <button
+                            className={styles.coverButton}
+                            disabled={isBusy || isSubmitted}
+                            onClick={() => makeMediaCover(item.localId)}
+                            type="button"
+                          >
+                            Usar de portada
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>

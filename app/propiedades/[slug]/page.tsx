@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPropertyBySlug, properties } from "../../../modules/properties/data";
-import { formatHNL } from "../../../shared/lib/formatters";
+import { getPublicPropertyBySlug } from "../../../modules/properties/public-data.server";
+import type { Property, PropertyMedia } from "../../../modules/properties/types";
+import { formatCurrency } from "../../../shared/lib/formatters";
 import { SiteFooter } from "../../../shared/components/site-footer";
 import { SiteHeader } from "../../../shared/components/site-header";
 
@@ -10,15 +11,85 @@ type PropertyPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return properties.map((property) => ({ slug: property.slug }));
+export const dynamic = "force-dynamic";
+
+const areaUnitLabels = {
+  acre: "acres",
+  manzana: "manzanas",
+  m2: "m²",
+  sqft: "pies²",
+  vara2: "varas²",
+} as const;
+
+const availabilityLabels = {
+  available: "Disponible",
+  reserved: "Reservada",
+  sold: "Vendida",
+  rented: "Alquilada",
+  unavailable: "No disponible",
+} as const;
+
+function formatPropertyPrice(property: Property) {
+  if (property.priceOnRequest || property.price === null) {
+    return "Precio a consultar";
+  }
+
+  const price = formatCurrency(
+    property.price,
+    property.currencyCode ?? "HNL",
+  );
+
+  if (property.pricePeriod === "monthly") return `${price} / mes`;
+  if (property.pricePeriod === "nightly") return `${price} / noche`;
+  return price;
+}
+
+function getOrderedMedia(property: Property): PropertyMedia[] {
+  if (property.media?.length) return property.media;
+
+  return property.gallery.map((url, index) => ({
+    altText:
+      index === 0 ? property.title : `Vista ${index + 1} de ${property.title}`,
+    id: `${property.slug}-${index}`,
+    isPrimary: index === 0,
+    sortOrder: index,
+    type: "image",
+    url,
+  }));
+}
+
+function getInitials(value?: string) {
+  if (!value) return "ZR";
+
+  return value
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toLocaleUpperCase("es-HN");
+}
+
+function serializeJsonLd(value: unknown) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
+function propertySchemaType(property: Property) {
+  if (property.propertyType === "Casa") return "SingleFamilyResidence";
+  if (property.propertyType === "Apartamento") return "Apartment";
+  if (property.propertyType === "Terreno") return "Landform";
+  return "Place";
 }
 
 export async function generateMetadata({
   params,
 }: PropertyPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const property = getPropertyBySlug(slug);
+  const property = await getPublicPropertyBySlug(slug);
 
   if (!property) {
     return { title: "Propiedad no encontrada" };
@@ -26,14 +97,14 @@ export async function generateMetadata({
 
   return {
     title: property.title,
-    description: `${property.propertyType} en ${property.city}, ${property.department}. ${property.bedrooms} habitaciones, ${property.bathrooms} baños y ${property.area} m².`,
+    description: `${property.propertyType} en ${property.city}, ${property.department}. Consulta características, disponibilidad y datos actualizados del anuncio.`,
     alternates: { canonical: `/propiedades/${property.slug}` },
   };
 }
 
 export default async function PropertyPage({ params }: PropertyPageProps) {
   const { slug } = await params;
-  const property = getPropertyBySlug(slug);
+  const property = await getPublicPropertyBySlug(slug);
 
   if (!property) {
     notFound();
@@ -41,7 +112,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "SingleFamilyResidence",
+    "@type": propertySchemaType(property),
     name: property.title,
     description: property.description,
     address: {
@@ -53,18 +124,32 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
     floorSize: {
       "@type": "QuantitativeValue",
       value: property.area,
-      unitCode: "MTK",
+      unitText: areaUnitLabels[property.areaUnit ?? "m2"],
     },
     numberOfBedrooms: property.bedrooms,
     numberOfBathroomsTotal: property.bathrooms,
     offers: {
       "@type": "Offer",
-      price: property.price,
-      priceCurrency: "HNL",
-      availability: "https://schema.org/InStock",
+      price: property.priceOnRequest ? undefined : property.price,
+      priceCurrency: property.currencyCode ?? "HNL",
+      availability:
+        property.availabilityStatus === "available" ||
+        !property.availabilityStatus
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
       url: `https://zelayaraices.com/propiedades/${property.slug}`,
     },
   };
+  const orderedMedia = getOrderedMedia(property);
+  const advertiserVerified =
+    property.advertiserVerified ?? property.agentVerified;
+  const locationLabel = property.locationConfirmed
+    ? "Confirmada"
+    : property.locationPrecision === "exact"
+      ? "Exacta, pendiente de confirmación"
+      : property.locationPrecision === "zone"
+        ? "Zona indicada"
+        : "Aproximada";
 
   return (
     <>
@@ -75,7 +160,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
       <main id="contenido" className="property-detail-page">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
         />
         <div className="container">
           <nav className="breadcrumbs property-breadcrumbs" aria-label="Migas de pan">
@@ -95,43 +180,71 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             </div>
             <div className="property-detail-header__price">
               <span>{property.operation}</span>
-              <strong>
-                {formatHNL(property.price)}
-                {property.pricePeriod === "monthly" ? " / mes" : null}
-              </strong>
+              <strong>{formatPropertyPrice(property)}</strong>
+              {property.availabilityStatus ? (
+                <small>
+                  {availabilityLabels[property.availabilityStatus]}
+                </small>
+              ) : null}
               <small>Precio actualizado {property.priceUpdatedAt}</small>
             </div>
           </header>
           <section className="property-gallery" aria-label="Galería de la propiedad">
-            {property.gallery.map((image, index) => (
-              <img
-                src={image}
-                alt={index === 0 ? property.title : `Vista ${index + 1} de ${property.title}`}
-                key={image}
-              />
-            ))}
-            <span className="verification-badge property-gallery__badge">
-              <span aria-hidden="true">✓</span> Propiedad verificada
-            </span>
+            {orderedMedia.map((media, index) =>
+              media.type === "video" ? (
+                <video
+                  aria-label={
+                    media.altText || `Video ${index + 1} de ${property.title}`
+                  }
+                  controls
+                  key={media.id}
+                  playsInline
+                  preload="metadata"
+                  src={media.url}
+                />
+              ) : (
+                <img
+                  src={media.url}
+                  alt={
+                    media.altText ||
+                    (index === 0
+                      ? property.title
+                      : `Vista ${index + 1} de ${property.title}`)
+                  }
+                  key={media.id}
+                />
+              ),
+            )}
+            {property.verified ? (
+              <span className="verification-badge property-gallery__badge">
+                <span aria-hidden="true">✓</span> Propiedad verificada
+              </span>
+            ) : null}
           </section>
           <div className="property-detail-layout">
             <div className="property-detail-main">
               <dl className="detail-facts">
                 <div>
                   <dt>Habitaciones</dt>
-                  <dd>{property.bedrooms}</dd>
+                  <dd>{property.bedrooms ?? "No aplica"}</dd>
                 </div>
                 <div>
                   <dt>Baños</dt>
-                  <dd>{property.bathrooms}</dd>
+                  <dd>{property.bathrooms ?? "No aplica"}</dd>
                 </div>
                 <div>
-                  <dt>Construcción</dt>
-                  <dd>{property.area} m²</dd>
+                  <dt>Área</dt>
+                  <dd>
+                    {property.area > 0
+                      ? `${property.area.toLocaleString("es-HN")} ${
+                          areaUnitLabels[property.areaUnit ?? "m2"]
+                        }`
+                      : "Por confirmar"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Estacionamientos</dt>
-                  <dd>{property.parking}</dd>
+                  <dd>{property.parking ?? "No indicado"}</dd>
                 </div>
                 <div>
                   <dt>Tipo</dt>
@@ -154,22 +267,28 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                     <p className="eyebrow">Resumen de confianza</p>
                     <h2>Lo que verificamos en este anuncio.</h2>
                   </div>
-                  <span className="verification-badge">
-                    <span aria-hidden="true">✓</span> Revisada
-                  </span>
+                  {property.verified ? (
+                    <span className="verification-badge">
+                      <span aria-hidden="true">✓</span> Revisada
+                    </span>
+                  ) : null}
                 </div>
                 <dl>
                   <div>
                     <dt>Propiedad</dt>
-                    <dd>Verificada</dd>
+                    <dd>{property.verified ? "Verificada" : "Sin verificar"}</dd>
                   </div>
                   <div>
                     <dt>Anunciante</dt>
-                    <dd>Identidad validada</dd>
+                    <dd>
+                      {advertiserVerified
+                        ? "Identidad validada"
+                        : "Verificación no disponible"}
+                    </dd>
                   </div>
                   <div>
                     <dt>Ubicación</dt>
-                    <dd>Confirmada</dd>
+                    <dd>{locationLabel}</dd>
                   </div>
                   <div>
                     <dt>Última revisión</dt>
@@ -177,7 +296,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                   </div>
                   <div>
                     <dt>Cambios publicados</dt>
-                    <dd>{property.publishedChanges}</dd>
+                    <dd>{property.publishedChanges ?? "No disponible"}</dd>
                   </div>
                   <div>
                     <dt>Reportes recibidos</dt>
@@ -185,18 +304,31 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                   </div>
                 </dl>
                 <p className="demo-note">
-                  Información demostrativa. En producción se alimentará del
-                  historial real de revisión y cambios.
+                  {property.source === "supabase"
+                    ? "La información corresponde al registro público aprobado. Los datos no confirmados se indican expresamente."
+                    : "Información demostrativa. En producción se alimentará del historial real de revisión y cambios."}
                 </p>
               </section>
             </div>
             <aside className="contact-card">
-              <p className="contact-card__label">Anunciante verificado</p>
+              <p className="contact-card__label">
+                {advertiserVerified
+                  ? "Anunciante verificado"
+                  : "Anunciante registrado"}
+              </p>
               <div className="contact-card__agent">
-                <span aria-hidden="true">MZ</span>
+                <span aria-hidden="true">
+                  {getInitials(property.advertiserName)}
+                </span>
                 <div>
-                  <strong>María Zelaya</strong>
-                  <small>Agente inmobiliaria · Demostración</small>
+                  <strong>
+                    {property.advertiserName ?? "Anunciante de la propiedad"}
+                  </strong>
+                  <small>
+                    {advertiserVerified
+                      ? "Identidad validada por Zelaya Raíces"
+                      : "Solicita sus datos antes de cualquier transacción"}
+                  </small>
                 </div>
               </div>
               <p>

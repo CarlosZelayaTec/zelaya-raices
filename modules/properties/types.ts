@@ -7,6 +7,31 @@ export type PropertyStatus =
   | "rejected"
   | "archived";
 
+export type PropertyCurrency = "HNL" | "USD";
+
+export type PropertyAreaUnit =
+  | "m2"
+  | "vara2"
+  | "manzana"
+  | "sqft"
+  | "acre";
+
+export type PropertyAvailability =
+  | "available"
+  | "reserved"
+  | "sold"
+  | "rented"
+  | "unavailable";
+
+export type PropertyMedia = {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  altText?: string;
+  isPrimary: boolean;
+  sortOrder: number;
+};
+
 export type Property = {
   slug: string;
   title: string;
@@ -15,22 +40,33 @@ export type Property = {
   address: string;
   operation: "Venta" | "Alquiler";
   propertyType: string;
-  price: number;
+  price: number | null;
+  priceOnRequest?: boolean;
+  currencyCode?: PropertyCurrency;
   pricePeriod?: "monthly" | "nightly";
-  bedrooms: number;
-  bathrooms: number;
+  bedrooms: number | null;
+  bathrooms: number | null;
   area: number;
-  parking: number;
+  areaUnit?: PropertyAreaUnit;
+  parking: number | null;
   image: string;
   gallery: string[];
+  media?: PropertyMedia[];
   featured: boolean;
   status: PropertyStatus;
+  availabilityStatus?: PropertyAvailability;
   verified: boolean;
   agentVerified: boolean;
+  advertiserName?: string;
+  advertiserVerified?: boolean;
   locationConfirmed: boolean;
+  locationPrecision?: "zone" | "approximate" | "exact";
   priceUpdatedAt: string;
   reviewedAt: string;
-  publishedChanges: number;
+  publishedChanges: number | null;
   reportCount: number;
   description: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  source?: "demo" | "supabase";
 };

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PropertyCard } from "../../modules/properties/components/property-card";
-import { properties } from "../../modules/properties/data";
+import { getPublicProperties } from "../../modules/properties/public-data.server";
 import { SiteFooter } from "../../shared/components/site-footer";
 import { SiteHeader } from "../../shared/components/site-header";
 
@@ -11,12 +11,20 @@ type PropertiesPageProps = {
   searchParams?: Promise<SearchParams>;
 };
 
+export const dynamic = "force-dynamic";
+
 const operationValues = new Set(["venta", "alquiler"]);
 const propertyTypeValues = new Set([
   "apartamento",
   "casa",
   "terreno",
   "villa",
+  "bodega",
+  "condominio",
+  "edificio",
+  "finca",
+  "local comercial",
+  "oficina",
 ]);
 const orderValues = new Set(["recientes", "precio-asc", "precio-desc"]);
 const priceValues = new Set([
@@ -118,6 +126,7 @@ export default async function PropertiesPage({
 }: PropertiesPageProps) {
   const filters = readFilters((await searchParams) ?? {});
   const copy = pageCopy(filters.operation);
+  const properties = await getPublicProperties();
 
   const filteredProperties = properties
     .filter((property) => property.status === "published")
@@ -146,9 +155,23 @@ export default async function PropertiesPage({
     .filter(
       (property) =>
         filters.maximumPrice === null ||
-        property.price <= filters.maximumPrice,
+        property.priceOnRequest ||
+        (property.currencyCode !== "USD" &&
+          property.price !== null &&
+          property.price <= filters.maximumPrice),
     )
     .sort((first, second) => {
+      if (filters.order === "recientes") return 0;
+
+      if (first.price === null || first.priceOnRequest) return 1;
+      if (second.price === null || second.priceOnRequest) return -1;
+
+      const firstCurrency = first.currencyCode ?? "HNL";
+      const secondCurrency = second.currencyCode ?? "HNL";
+      if (firstCurrency !== secondCurrency) {
+        return firstCurrency === "HNL" ? -1 : 1;
+      }
+
       if (filters.order === "precio-asc") return first.price - second.price;
       if (filters.order === "precio-desc") return second.price - first.price;
       return 0;
@@ -222,7 +245,13 @@ export default async function PropertiesPage({
                   <option value="casa">Casa</option>
                   <option value="apartamento">Apartamento</option>
                   <option value="terreno">Terreno</option>
-                  <option value="villa">Villa</option>
+                   <option value="villa">Villa</option>
+                   <option value="condominio">Condominio</option>
+                   <option value="local comercial">Local comercial</option>
+                   <option value="oficina">Oficina</option>
+                   <option value="bodega">Bodega</option>
+                   <option value="finca">Finca</option>
+                   <option value="edificio">Edificio</option>
                 </select>
               </label>
               <label>

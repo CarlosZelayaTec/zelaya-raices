@@ -1456,10 +1456,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      organize_listing_media: {
+        Args: { p_listing_id: string; p_ordered_ids: string[] }
+        Returns: {
+          alt_text: string | null
+          created_at: string
+          created_by: string
+          duration_seconds: number | null
+          height: number | null
+          id: string
+          is_primary: boolean
+          listing_id: string
+          media_type: Database["public"]["Enums"]["listing_media_type"]
+          mime_type: string
+          organization_id: string
+          processing_status: Database["public"]["Enums"]["media_processing_status"]
+          public_bucket: string | null
+          public_path: string | null
+          size_bytes: number
+          sort_order: number
+          source_bucket: string
+          source_path: string
+          updated_at: string
+          width: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "listing_media"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       register_listing_media: {
         Args: {
           p_extension: string
           p_listing_id: string
+          p_media_id: string
           p_media_type: Database["public"]["Enums"]["listing_media_type"]
           p_mime_type: string
           p_size_bytes: number
@@ -1492,6 +1524,23 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_listing_location: {
+        Args: {
+          p_city?: string
+          p_department: string
+          p_exact_latitude: number
+          p_exact_longitude: number
+          p_listing_id: string
+          p_municipality: string
+          p_organization_id: string
+          p_precision: Database["public"]["Enums"]["location_precision"]
+          p_private_address?: string
+          p_zone?: string
+        }
+        Returns: {
+          saved_listing_id: string
+        }[]
       }
       set_platform_staff_role: {
         Args: {
