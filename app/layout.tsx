@@ -17,6 +17,23 @@ export const metadata: Metadata = {
   description:
     "Descubre propiedades verificadas, ubicaciones confirmadas y precios actualizados en Honduras.",
   applicationName: "Zelaya Raíces",
+  icons: {
+    icon: [
+      {
+        url: "/brand/zelaya-favicon.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/brand/zelaya-favicon.png",
+    apple: [
+      {
+        url: "/brand/zelaya-apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
   keywords: [
     "bienes raíces Honduras",
     "propiedades Honduras",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Brand } from "@/shared/components/brand";
+import { Brand, BrandMark } from "@/shared/components/brand";
 import { requireAuthContext } from "@/shared/lib/auth";
 
 import { ActivationForm } from "./activation-form";
@@ -23,11 +23,11 @@ export default async function ActivateAdministrationPage() {
   return (
     <main className={styles.page}>
       <div className={styles.topbar}>
-        <Brand />
+        <Brand tone="light" />
         <Link href="/panel">Volver al panel</Link>
       </div>
       <section className={styles.card}>
-        <span className={styles.mark}>ZR</span>
+        <BrandMark className={styles.mark} />
         <p className={styles.eyebrow}>Configuración reservada</p>
         <h1>Activa el control administrativo.</h1>
         <p className={styles.copy}>
@@ -42,4 +42,3 @@ export default async function ActivateAdministrationPage() {
     </main>
   );
 }
-

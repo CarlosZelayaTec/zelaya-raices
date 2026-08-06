@@ -38,7 +38,7 @@ export function DashboardShell({
     <div className={styles.dashboard}>
       <aside className={styles.sidebar}>
         <div className={styles.brandWrap}>
-          <Brand />
+          <Brand tone="light" />
         </div>
 
         <div className={styles.workspace}>

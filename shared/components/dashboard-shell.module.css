@@ -26,15 +26,6 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.brandWrap :global(.brand) {
-  color: var(--white);
-}
-
-.brandWrap :global(.brand__mark) {
-  background: var(--ivory);
-  color: var(--green-950);
-}
-
 .workspace {
   display: grid;
   gap: 3px;
@@ -218,10 +209,23 @@
     padding: 16px 18px;
   }
 
-  .brandWrap,
   .workspace,
   .sidebarFooter {
     display: none;
+  }
+
+  .brandWrap {
+    display: block;
+    padding: 0 4px 13px;
+  }
+
+  .brandWrap :global(.brand__symbol) {
+    width: 30px;
+    height: 38px;
+  }
+
+  .brandWrap :global(.brand__wordmark strong) {
+    font-size: 14px;
   }
 
   .navigation {

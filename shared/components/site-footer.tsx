@@ -6,7 +6,7 @@ export function SiteFooter() {
     <footer className="site-footer" id="footer">
       <div className="container site-footer__grid">
         <div className="site-footer__intro">
-          <Brand />
+          <Brand tone="light" variant="lockup" />
           <p>
             Una forma más clara y confiable de descubrir propiedades en
             Honduras.

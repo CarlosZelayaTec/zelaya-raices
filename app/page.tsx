@@ -5,6 +5,7 @@ import { featuredProperties, properties } from "../modules/properties/data";
 import { HeroSearch } from "../modules/search/components/hero-search";
 import { SiteFooter } from "../shared/components/site-footer";
 import { SiteHeader } from "../shared/components/site-header";
+import { WhatsAppIcon } from "../shared/components/whatsapp-icon";
 
 export const metadata: Metadata = {
   title: "Compra y alquila propiedades verificadas en Honduras",
@@ -414,7 +415,7 @@ export default function Home() {
         aria-label="Abrir WhatsApp para consultar a Zelaya Raíces"
       >
         <span className="whatsapp-float__mark" aria-hidden="true">
-          WA
+          <WhatsAppIcon />
         </span>
         <span>¿Te ayudamos?</span>
       </a>

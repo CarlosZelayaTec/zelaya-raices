@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/shared/components/brand";
 import styles from "@/shared/components/dashboard-content.module.css";
 import { getPanelContext } from "@/shared/lib/dashboard/panel-context";
 import {
@@ -78,7 +79,7 @@ export default async function PanelPage() {
 
         <section className={`${styles.panelCard} ${styles.emptyState}`}>
           <div>
-            <span className={styles.emptyStateMark}>ZR</span>
+            <BrandMark className={styles.emptyStateMark} />
             <h2>¿Quieres publicar una propiedad?</h2>
             <p>
               Configura una cuenta de publicación en menos de un minuto. Tus
