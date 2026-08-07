@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PropertyLocationMap } from "../../../modules/properties/components/property-location-map";
 import { getPublicPropertyBySlug } from "../../../modules/properties/public-data.server";
 import type { Property, PropertyMedia } from "../../../modules/properties/types";
 import { formatCurrency } from "../../../shared/lib/formatters";
@@ -300,6 +301,12 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                   decisión o transacción.
                 </p>
               </section>
+              {property.mapLocation ? (
+                <PropertyLocationMap
+                  location={property.mapLocation}
+                  title={property.title}
+                />
+              ) : null}
               <section className="detail-section detail-verification" id="verificacion">
                 <div className="detail-verification__heading">
                   <div>

@@ -41,6 +41,13 @@ export type PropertySeller = {
   verified: boolean;
 };
 
+export type PropertyMapLocation = {
+  latitude: number;
+  longitude: number;
+  precision: "zone" | "approximate" | "exact";
+  confirmed: boolean;
+};
+
 export type Property = {
   slug: string;
   title: string;
@@ -71,6 +78,7 @@ export type Property = {
   seller?: PropertySeller;
   locationConfirmed: boolean;
   locationPrecision?: "zone" | "approximate" | "exact";
+  mapLocation?: PropertyMapLocation;
   priceUpdatedAt: string;
   reviewedAt: string;
   publishedChanges: number | null;

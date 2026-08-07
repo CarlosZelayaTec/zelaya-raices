@@ -107,6 +107,9 @@ test("renders the approved property with safe structured data", async () => {
   assert.match(html, /Contactar por WhatsApp/);
   assert.match(html, /href="https:\/\/wa\.me\//);
   assert.match(html, /href="tel:\+/);
+  assert.match(html, /C.mo llegar/);
+  assert.match(html, /Abrir en mapas/);
+  assert.match(html, /no se guarda/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /Landform/);
   assert.doesNotMatch(html, /Información demostrativa/i);

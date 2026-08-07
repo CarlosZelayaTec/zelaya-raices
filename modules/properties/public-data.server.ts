@@ -5,7 +5,12 @@ import { getPublicSupabaseConfig } from "@/shared/lib/supabase/config";
 import type { Database } from "@/shared/lib/supabase/database.types";
 
 import { getPropertyBySlug, properties as demoProperties } from "./data";
-import type { Property, PropertyMedia, PropertySeller } from "./types";
+import type {
+  Property,
+  PropertyMapLocation,
+  PropertyMedia,
+  PropertySeller,
+} from "./types";
 
 const demoCatalogEnabled = process.env.ENABLE_DEMO_LISTINGS === "true";
 
@@ -44,6 +49,9 @@ type PublicOrganization = Pick<
 
 type PublicListingContact =
   Database["public"]["Functions"]["get_public_listing_contact"]["Returns"][number];
+
+type PublicListingMapLocation =
+  Database["public"]["Functions"]["get_public_listing_map_location"]["Returns"][number];
 
 type PublicListingRow = Pick<
   ListingRow,
@@ -298,6 +306,43 @@ async function getPublicListingContact(
   };
 }
 
+async function getPublicListingMapLocation(
+  client: SupabaseClient<Database>,
+  listingId: string,
+): Promise<PropertyMapLocation | undefined> {
+  const { data, error } = await client.rpc("get_public_listing_map_location", {
+    p_listing_id: listingId,
+  });
+
+  if (error) throw error;
+
+  const location = (data as PublicListingMapLocation[] | null)?.[0];
+  const latitude = Number(location?.public_latitude);
+  const longitude = Number(location?.public_longitude);
+
+  if (
+    !location ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return undefined;
+  }
+
+  return {
+    confirmed: location.location_confirmed,
+    latitude,
+    longitude,
+    // Public coordinates are deliberately rounded by the database contract.
+    // Legacy values must not make the public map claim parcel-level precision.
+    precision:
+      location.location_precision === "zone" ? "zone" : "approximate",
+  };
+}
+
 function mergeRealWithDemos(realProperties: Property[]) {
   const seen = new Set<string>();
 
@@ -381,13 +426,28 @@ export const getPublicPropertyBySlug = cache(
       const property = mapListing(client, listing);
       if (!property) return demoProperty;
 
-      try {
-        const seller = await getPublicListingContact(client, listing.id);
-        return seller ? { ...property, seller } : property;
-      } catch (contactError) {
-        reportCatalogError(contactError);
-        return property;
+      const [sellerResult, mapLocationResult] = await Promise.allSettled([
+        getPublicListingContact(client, listing.id),
+        getPublicListingMapLocation(client, listing.id),
+      ]);
+
+      if (sellerResult.status === "rejected") {
+        reportCatalogError(sellerResult.reason);
       }
+
+      if (mapLocationResult.status === "rejected") {
+        reportCatalogError(mapLocationResult.reason);
+      }
+
+      return {
+        ...property,
+        ...(sellerResult.status === "fulfilled" && sellerResult.value
+          ? { seller: sellerResult.value }
+          : {}),
+        ...(mapLocationResult.status === "fulfilled" && mapLocationResult.value
+          ? { mapLocation: mapLocationResult.value }
+          : {}),
+      };
     } catch (error) {
       reportCatalogError(error);
       return demoProperty;

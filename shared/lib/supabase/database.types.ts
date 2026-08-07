@@ -1428,6 +1428,15 @@ export type Database = {
           seller_whatsapp: string
         }[]
       }
+      get_public_listing_map_location: {
+        Args: { p_listing_id: string }
+        Returns: {
+          location_confirmed: boolean
+          location_precision: Database["public"]["Enums"]["location_precision"]
+          public_latitude: number
+          public_longitude: number
+        }[]
+      }
       moderate_listing: {
         Args: {
           p_action: Database["public"]["Enums"]["moderation_action_type"]
