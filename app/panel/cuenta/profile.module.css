@@ -81,6 +81,13 @@
   gap: 16px;
 }
 
+.contactHint {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .success,
 .error {
   margin: 0 0 20px;
@@ -105,4 +112,3 @@
     grid-template-columns: 1fr;
   }
 }
-

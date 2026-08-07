@@ -537,6 +537,7 @@ export type Database = {
           construction_area_unit:
             | Database["public"]["Enums"]["area_unit"]
             | null
+          contact_profile_id: string
           created_at: string
           created_by: string
           currency_code: Database["public"]["Enums"]["currency_code"]
@@ -575,6 +576,7 @@ export type Database = {
           construction_area_unit?:
             | Database["public"]["Enums"]["area_unit"]
             | null
+          contact_profile_id: string
           created_at?: string
           created_by: string
           currency_code?: Database["public"]["Enums"]["currency_code"]
@@ -613,6 +615,7 @@ export type Database = {
           construction_area_unit?:
             | Database["public"]["Enums"]["area_unit"]
             | null
+          contact_profile_id?: string
           created_at?: string
           created_by?: string
           currency_code?: Database["public"]["Enums"]["currency_code"]
@@ -643,6 +646,13 @@ export type Database = {
           year_built?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "listings_contact_profile_id_fkey"
+            columns: ["contact_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listings_created_by_fkey"
             columns: ["created_by"]
@@ -898,6 +908,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          public_email: string | null
           public_phone: string | null
           public_whatsapp: string | null
           slug: string | null
@@ -914,6 +925,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id: string
+          public_email?: string | null
           public_phone?: string | null
           public_whatsapp?: string | null
           slug?: string | null
@@ -930,6 +942,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          public_email?: string | null
           public_phone?: string | null
           public_whatsapp?: string | null
           slug?: string | null
@@ -1329,6 +1342,7 @@ export type Database = {
           construction_area_unit:
             | Database["public"]["Enums"]["area_unit"]
             | null
+          contact_profile_id: string
           created_at: string
           created_by: string
           currency_code: Database["public"]["Enums"]["currency_code"]
@@ -1403,6 +1417,17 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      get_public_listing_contact: {
+        Args: { p_listing_id: string }
+        Returns: {
+          seller_bio: string
+          seller_email: string
+          seller_name: string
+          seller_phone: string
+          seller_verified: boolean
+          seller_whatsapp: string
+        }[]
+      }
       moderate_listing: {
         Args: {
           p_action: Database["public"]["Enums"]["moderation_action_type"]
@@ -1420,6 +1445,7 @@ export type Database = {
           construction_area_unit:
             | Database["public"]["Enums"]["area_unit"]
             | null
+          contact_profile_id: string
           created_at: string
           created_by: string
           currency_code: Database["public"]["Enums"]["currency_code"]
@@ -1455,6 +1481,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      moderate_verification: {
+        Args: {
+          p_action: Database["public"]["Enums"]["moderation_action_type"]
+          p_target_id: string
+          p_target_type: string
+        }
+        Returns: Database["public"]["Enums"]["verification_status"]
       }
       organize_listing_media: {
         Args: { p_listing_id: string; p_ordered_ids: string[] }
@@ -1554,6 +1588,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          public_email: string | null
           public_phone: string | null
           public_whatsapp: string | null
           slug: string | null
@@ -1581,6 +1616,7 @@ export type Database = {
           construction_area_unit:
             | Database["public"]["Enums"]["area_unit"]
             | null
+          contact_profile_id: string
           created_at: string
           created_by: string
           currency_code: Database["public"]["Enums"]["currency_code"]
@@ -1616,6 +1652,80 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_published_listing_revision: {
+        Args: {
+          p_bathrooms?: number
+          p_bedrooms?: number
+          p_construction_area?: number
+          p_construction_area_unit?: Database["public"]["Enums"]["area_unit"]
+          p_currency_code: Database["public"]["Enums"]["currency_code"]
+          p_description: string
+          p_expected_version: number
+          p_land_area?: number
+          p_land_area_unit?: Database["public"]["Enums"]["area_unit"]
+          p_listing_id: string
+          p_operation_type: Database["public"]["Enums"]["operation_type"]
+          p_parking_spaces?: number
+          p_price_amount: number
+          p_price_on_request: boolean
+          p_price_period: Database["public"]["Enums"]["price_period"]
+          p_property_type: Database["public"]["Enums"]["property_type"]
+          p_title: string
+          p_year_built?: number
+        }
+        Returns: {
+          availability_status: Database["public"]["Enums"]["availability_status"]
+          availability_updated_at: string
+          bathrooms: number | null
+          bedrooms: number | null
+          construction_area: number | null
+          construction_area_unit:
+            | Database["public"]["Enums"]["area_unit"]
+            | null
+          contact_profile_id: string
+          created_at: string
+          created_by: string
+          currency_code: Database["public"]["Enums"]["currency_code"]
+          description: string
+          featured_until: string | null
+          id: string
+          land_area: number | null
+          land_area_unit: Database["public"]["Enums"]["area_unit"] | null
+          last_price_update_at: string
+          operation_type: Database["public"]["Enums"]["operation_type"]
+          organization_id: string
+          parking_spaces: number | null
+          price_amount: number | null
+          price_on_request: boolean
+          price_period: Database["public"]["Enums"]["price_period"]
+          property_type: Database["public"]["Enums"]["property_type"]
+          publication_status: Database["public"]["Enums"]["publication_status"]
+          published_at: string | null
+          reports_count: number
+          slug: string
+          title: string
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+          version: number
+          view_count: number
+          year_built: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_published_listing_revision_with_media: {
+        Args: Database["public"]["Functions"]["submit_published_listing_revision"]["Args"] & {
+          p_ordered_media_ids: string[]
+        }
+        Returns: Database["public"]["Functions"]["submit_published_listing_revision"]["Returns"]
+        SetofOptions: Database["public"]["Functions"]["submit_published_listing_revision"]["SetofOptions"]
       }
     }
     Enums: {

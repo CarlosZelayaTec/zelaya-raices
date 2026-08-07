@@ -6,6 +6,7 @@ import type { Property, PropertyMedia } from "../../../modules/properties/types"
 import { formatCurrency } from "../../../shared/lib/formatters";
 import { SiteFooter } from "../../../shared/components/site-footer";
 import { SiteHeader } from "../../../shared/components/site-header";
+import { WhatsAppIcon } from "../../../shared/components/whatsapp-icon";
 
 type PropertyPageProps = {
   params: Promise<{ slug: string }>;
@@ -67,6 +68,27 @@ function getInitials(value?: string) {
     .map((part) => part[0])
     .join("")
     .toLocaleUpperCase("es-HN");
+}
+
+function contactPhoneDigits(value?: string) {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  return digits.length >= 8 ? digits : undefined;
+}
+
+function formatContactPhone(value?: string) {
+  const digits = contactPhoneDigits(value);
+  if (!digits) return undefined;
+
+  if (digits.startsWith("504") && digits.length === 11) {
+    return `+504 ${digits.slice(3, 7)} ${digits.slice(7)}`;
+  }
+
+  return value?.trim();
+}
+
+function getWhatsAppUrl(phone: string, propertyTitle: string) {
+  const message = `Hola, me interesa la propiedad \"${propertyTitle}\" que vi en Zelaya Raíces.`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 function serializeJsonLd(value: unknown) {
@@ -143,6 +165,15 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const orderedMedia = getOrderedMedia(property);
   const advertiserVerified =
     property.advertiserVerified ?? property.agentVerified;
+  const seller = property.seller;
+  const sellerName =
+    seller?.name || property.advertiserName || "Anunciante de la propiedad";
+  const whatsappPhone = contactPhoneDigits(seller?.whatsapp);
+  const phone = contactPhoneDigits(seller?.phone);
+  const visiblePhone = formatContactPhone(seller?.phone);
+  const sellerEmail = seller?.email?.trim();
+  const sellerVerified = seller?.verified ?? advertiserVerified;
+  const hasSellerContact = Boolean(whatsappPhone || phone || sellerEmail);
   const locationLabel = property.locationConfirmed
     ? "Confirmada"
     : property.locationPrecision === "exact"
@@ -189,6 +220,14 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               <small>Precio actualizado {property.priceUpdatedAt}</small>
             </div>
           </header>
+          {hasSellerContact ? (
+            <a
+              className="button button--accent button--small property-detail-quick-contact"
+              href="#contactar"
+            >
+              Contactar al vendedor
+            </a>
+          ) : null}
           <section className="property-gallery" aria-label="Galería de la propiedad">
             {orderedMedia.map((media, index) =>
               media.type === "video" ? (
@@ -310,38 +349,62 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                 </p>
               </section>
             </div>
-            <aside className="contact-card">
+            <aside className="contact-card" id="contactar">
               <p className="contact-card__label">
-                {advertiserVerified
-                  ? "Anunciante verificado"
-                  : "Anunciante registrado"}
+                {sellerVerified ? "Vendedor verificado" : "Vendedor registrado"}
               </p>
               <div className="contact-card__agent">
                 <span aria-hidden="true">
-                  {getInitials(property.advertiserName)}
+                  {getInitials(sellerName)}
                 </span>
                 <div>
-                  <strong>
-                    {property.advertiserName ?? "Anunciante de la propiedad"}
-                  </strong>
+                  <strong>{sellerName}</strong>
                   <small>
-                    {advertiserVerified
+                    {sellerVerified
                       ? "Identidad validada por Zelaya Raíces"
-                      : "Solicita sus datos antes de cualquier transacción"}
+                      : "Anunciante registrado en Zelaya Raíces"}
                   </small>
                 </div>
               </div>
+              {seller?.bio ? <p className="contact-card__bio">{seller.bio}</p> : null}
               <p>
                 Consulta disponibilidad, agenda una visita o solicita más
-                información sobre esta propiedad.
+                información directamente al vendedor.
               </p>
-              <a
-                className="button button--primary button--full"
-                href={`mailto:hola@zelayaraices.com?subject=Consulta%20sobre%20${encodeURIComponent(property.title)}`}
-              >
-                Enviar consulta
-              </a>
-              <a className="button button--outline button--full" href="#verificacion">
+              {hasSellerContact ? (
+                <div className="contact-card__actions">
+                  {whatsappPhone ? (
+                    <a
+                      className="button button--primary button--full contact-card__whatsapp"
+                      href={getWhatsAppUrl(whatsappPhone, property.title)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      <WhatsAppIcon />
+                      Contactar por WhatsApp
+                    </a>
+                  ) : null}
+                  {sellerEmail ? (
+                    <a
+                      className="button button--outline button--full"
+                      href={`mailto:${sellerEmail}?subject=${encodeURIComponent(`Consulta sobre ${property.title}`)}`}
+                    >
+                      Enviar correo
+                    </a>
+                  ) : null}
+                  {phone && visiblePhone ? (
+                    <a className="contact-card__phone" href={`tel:+${phone}`}>
+                      Llamar al {visiblePhone}
+                    </a>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="contact-card__unavailable">
+                  El anunciante está actualizando sus datos de contacto. Vuelve
+                  a intentarlo pronto.
+                </p>
+              )}
+              <a className="contact-card__trust-link" href="#verificacion">
                 Ver historial de confianza
               </a>
               <small className="contact-card__note">
@@ -352,6 +415,29 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           </div>
         </div>
       </main>
+      {hasSellerContact ? (
+        <nav className="property-contact-dock" aria-label="Contactar al vendedor">
+          {whatsappPhone ? (
+            <a
+              className="property-contact-dock__whatsapp"
+              href={getWhatsAppUrl(whatsappPhone, property.title)}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <WhatsAppIcon />
+              WhatsApp
+            </a>
+          ) : null}
+          {phone ? <a href={`tel:+${phone}`}>Llamar</a> : null}
+          {sellerEmail ? (
+            <a
+              href={`mailto:${sellerEmail}?subject=${encodeURIComponent(`Consulta sobre ${property.title}`)}`}
+            >
+              Correo
+            </a>
+          ) : null}
+        </nav>
+      ) : null}
       <SiteFooter />
     </>
   );

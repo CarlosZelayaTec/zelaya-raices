@@ -5,7 +5,9 @@ import { requireStaffContext } from "@/shared/lib/auth";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server";
 
 export default async function AdminPage() {
-  await requireStaffContext();
+  const context = await requireStaffContext();
+  const canManageVerifications =
+    context.profile?.staff_role === "super_admin";
   const supabase = await createSupabaseServerClient();
   const [
     usersResult,
@@ -13,6 +15,8 @@ export default async function AdminPage() {
     listingsResult,
     pendingResult,
     reportsResult,
+    profileVerificationsResult,
+    organizationVerificationsResult,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("organizations").select("id", { count: "exact", head: true }),
@@ -25,6 +29,16 @@ export default async function AdminPage() {
       .from("reports")
       .select("id", { count: "exact", head: true })
       .in("status", ["open", "in_review"]),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("account_status", "active")
+      .in("verification_status", ["unverified", "pending"]),
+    supabase
+      .from("organizations")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active")
+      .in("verification_status", ["unverified", "pending"]),
   ]);
 
   return (
@@ -45,6 +59,14 @@ export default async function AdminPage() {
           >
             Abrir cola de revisión
           </Link>
+          {canManageVerifications ? (
+            <Link
+              className="button button--outline button--small"
+              href="/admin/verificaciones"
+            >
+              Verificar anunciantes
+            </Link>
+          ) : null}
         </div>
       </header>
 
@@ -93,6 +115,23 @@ export default async function AdminPage() {
               </span>
               <span>→</span>
             </Link>
+            {canManageVerifications ? (
+              <Link
+                className={styles.quickAction}
+                href="/admin/verificaciones"
+              >
+                <span>03</span>
+                <span>
+                  <strong>Validar anunciantes</strong>
+                  <small>
+                    {(profileVerificationsResult.count ?? 0) +
+                      (organizationVerificationsResult.count ?? 0)}{" "}
+                    cuentas pendientes de verificación
+                  </small>
+                </span>
+                <span>→</span>
+              </Link>
+            ) : null}
           </div>
         </article>
 
@@ -121,4 +160,3 @@ export default async function AdminPage() {
     </>
   );
 }
-

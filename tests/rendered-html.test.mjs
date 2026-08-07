@@ -102,6 +102,11 @@ test("renders the approved property with safe structured data", async () => {
   assert.match(html, REAL_LISTING_TITLE);
   assert.match(html, /Precio actualizado/);
   assert.match(html, /Resumen de confianza/);
+  assert.match(html, /id="contactar"/);
+  assert.match(html, /Vendedor (?:verificado|registrado)/);
+  assert.match(html, /Contactar por WhatsApp/);
+  assert.match(html, /href="https:\/\/wa\.me\//);
+  assert.match(html, /href="tel:\+/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /Landform/);
   assert.doesNotMatch(html, /Información demostrativa/i);

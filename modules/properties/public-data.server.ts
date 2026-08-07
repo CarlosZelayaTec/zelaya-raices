@@ -5,7 +5,7 @@ import { getPublicSupabaseConfig } from "@/shared/lib/supabase/config";
 import type { Database } from "@/shared/lib/supabase/database.types";
 
 import { getPropertyBySlug, properties as demoProperties } from "./data";
-import type { Property, PropertyMedia } from "./types";
+import type { Property, PropertyMedia, PropertySeller } from "./types";
 
 const demoCatalogEnabled = process.env.ENABLE_DEMO_LISTINGS === "true";
 
@@ -41,6 +41,9 @@ type PublicOrganization = Pick<
   OrganizationRow,
   "name" | "verification_status"
 >;
+
+type PublicListingContact =
+  Database["public"]["Functions"]["get_public_listing_contact"]["Returns"][number];
 
 type PublicListingRow = Pick<
   ListingRow,
@@ -272,6 +275,29 @@ function mapListing(
   };
 }
 
+async function getPublicListingContact(
+  client: SupabaseClient<Database>,
+  listingId: string,
+): Promise<PropertySeller | undefined> {
+  const { data, error } = await client.rpc("get_public_listing_contact", {
+    p_listing_id: listingId,
+  });
+
+  if (error) throw error;
+
+  const contact = (data as PublicListingContact[] | null)?.[0];
+  if (!contact) return undefined;
+
+  return {
+    bio: contact.seller_bio || undefined,
+    email: contact.seller_email || undefined,
+    name: contact.seller_name,
+    phone: contact.seller_phone || undefined,
+    verified: contact.seller_verified,
+    whatsapp: contact.seller_whatsapp || undefined,
+  };
+}
+
 function mergeRealWithDemos(realProperties: Property[]) {
   const seen = new Set<string>();
 
@@ -351,9 +377,17 @@ export const getPublicPropertyBySlug = cache(
       if (error) throw error;
       if (!data) return demoProperty;
 
-      return (
-        mapListing(client, data as unknown as PublicListingRow) ?? demoProperty
-      );
+      const listing = data as unknown as PublicListingRow;
+      const property = mapListing(client, listing);
+      if (!property) return demoProperty;
+
+      try {
+        const seller = await getPublicListingContact(client, listing.id);
+        return seller ? { ...property, seller } : property;
+      } catch (contactError) {
+        reportCatalogError(contactError);
+        return property;
+      }
     } catch (error) {
       reportCatalogError(error);
       return demoProperty;

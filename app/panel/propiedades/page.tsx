@@ -12,6 +12,16 @@ import { createSupabaseServerClient } from "@/shared/lib/supabase/server";
 
 import { updateAvailabilityAction } from "./actions";
 
+function hasRequiredPublicContact(profile: Awaited<ReturnType<typeof getPanelContext>>["profile"]) {
+  if (!profile) return false;
+
+  return (
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.public_email ?? "") &&
+    /^\+[1-9]\d{7,14}$/.test(profile.public_phone ?? "") &&
+    /^\+[1-9]\d{7,14}$/.test(profile.public_whatsapp ?? "")
+  );
+}
+
 export default async function PanelPropertiesPage({
   searchParams,
 }: {
@@ -22,6 +32,7 @@ export default async function PanelPropertiesPage({
   const organizationIds = context.organizations.map(
     (organization) => organization.id,
   );
+  const needsPublicContact = !hasRequiredPublicContact(context.profile);
   const supabase = await createSupabaseServerClient();
   const { data: listings } =
     organizationIds.length > 0
@@ -57,6 +68,19 @@ export default async function PanelPropertiesPage({
         ) : null}
       </header>
 
+      {needsPublicContact ? (
+        <div className={styles.notice} role="status">
+          <span aria-hidden="true">i</span>
+          <div>
+            <strong>Completa tus datos de contacto</strong>
+            Antes de enviar un anuncio a revisión, agrega un correo, teléfono y
+            WhatsApp válidos para que las personas interesadas puedan contactarte.
+            {" "}
+            <Link href="/panel/cuenta">Completar mi perfil</Link>
+          </div>
+        </div>
+      ) : null}
+
       {estado ? (
         <div className={styles.notice} role="status">
           <span aria-hidden="true">i</span>
@@ -64,11 +88,19 @@ export default async function PanelPropertiesPage({
             <strong>
               {estado === "disponibilidad-actualizada"
                 ? "Disponibilidad actualizada"
-                : "No se pudo actualizar"}
+                : estado === "edicion-no-disponible"
+                  ? "Edición no disponible"
+                  : estado === "edicion-incompleta"
+                    ? "Falta información para editar"
+                    : "No se pudo actualizar"}
             </strong>
             {estado === "disponibilidad-actualizada"
-              ? "El nuevo estado ya está guardado."
-              : "La propiedad puede estar en revisión o fuera de tu alcance."}
+                ? "El nuevo estado ya está guardado."
+              : estado === "edicion-no-disponible"
+                ? "Los anuncios que ya están en revisión no pueden modificarse hasta que el equipo termine de evaluarlos."
+                : estado === "edicion-incompleta"
+                  ? "Este anuncio no tiene una ubicación completa todavía. Actualízala desde un borrador nuevo o solicita ayuda al equipo."
+                  : "La propiedad puede estar en revisión o fuera de tu alcance."}
           </div>
         </div>
       ) : null}
@@ -200,12 +232,26 @@ export default async function PanelPropertiesPage({
                         {["draft", "rejected"].includes(
                           listing.publication_status,
                         ) ? (
+                          <Link
+                            className={styles.inlineButton}
+                            href={`/panel/propiedades/${listing.id}/editar`}
+                          >
+                            Editar
+                          </Link>
+                        ) : listing.publication_status === "pending_review" ? (
                           <span className={styles.inlineButton}>
-                            Edición disponible pronto
+                            En revisión
                           </span>
+                        ) : listing.publication_status === "published" ? (
+                          <Link
+                            className={styles.inlineButton}
+                            href={`/panel/propiedades/${listing.id}/editar`}
+                          >
+                            Editar y reenviar a revisión
+                          </Link>
                         ) : (
                           <span className={styles.inlineButton}>
-                            Ver estado
+                            Edición no disponible
                           </span>
                         )}
                       </div>

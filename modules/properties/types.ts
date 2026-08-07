@@ -32,6 +32,15 @@ export type PropertyMedia = {
   sortOrder: number;
 };
 
+export type PropertySeller = {
+  name: string;
+  bio?: string;
+  email?: string;
+  phone?: string;
+  whatsapp?: string;
+  verified: boolean;
+};
+
 export type Property = {
   slug: string;
   title: string;
@@ -59,6 +68,7 @@ export type Property = {
   agentVerified: boolean;
   advertiserName?: string;
   advertiserVerified?: boolean;
+  seller?: PropertySeller;
   locationConfirmed: boolean;
   locationPrecision?: "zone" | "approximate" | "exact";
   priceUpdatedAt: string;

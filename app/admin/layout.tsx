@@ -36,6 +36,15 @@ export default async function AdminLayout({
           label: "Revisión de anuncios",
           shortLabel: "RV",
         },
+        ...(staffRole === "super_admin"
+          ? [
+              {
+                href: "/admin/verificaciones",
+                label: "Verificaciones",
+                shortLabel: "VE",
+              },
+            ]
+          : []),
         { href: "/admin/usuarios", label: "Usuarios y roles", shortLabel: "US" },
         { href: "/panel", label: "Panel de usuario", shortLabel: "PA" },
       ]}
@@ -47,4 +56,3 @@ export default async function AdminLayout({
     </DashboardShell>
   );
 }
-

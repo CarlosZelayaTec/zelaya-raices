@@ -17,14 +17,17 @@ import type { Database } from "@/shared/lib/supabase/database.types";
 
 import { LocationMapPicker } from "./location-map-picker";
 import styles from "./listing-publication-wizard.module.css";
-import type { ListingPublicationWizardProps } from "./types";
+import type {
+  ListingPublicationWizardProps,
+  ListingWizardInitialListing,
+} from "./types";
 
 type ListingUpdate =
   Database["public"]["Tables"]["listings"]["Update"];
 type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
 type MediaRow = Database["public"]["Tables"]["listing_media"]["Row"];
-type PropertyType = "land" | "house" | "apartment";
-type OperationType = "sale" | "rent";
+type PropertyType = Database["public"]["Enums"]["property_type"];
+type OperationType = Database["public"]["Enums"]["operation_type"];
 type AreaUnit = Database["public"]["Enums"]["area_unit"];
 type CurrencyCode = Database["public"]["Enums"]["currency_code"];
 type PricePeriod = Database["public"]["Enums"]["price_period"];
@@ -69,20 +72,27 @@ type MediaStatus =
   | "removing"
   | "error";
 
+type EditablePublicationStatus = "draft" | "rejected";
+type RevisionPublicationStatus = EditablePublicationStatus | "published";
+
 type DraftReference = {
   id: string;
   slug: string;
-  publicationStatus: "draft" | "pending_review";
+  publicationStatus: RevisionPublicationStatus | "pending_review";
   version: number;
+  availabilityStatus: Database["public"]["Enums"]["availability_status"];
 };
 
 type MediaItem = {
   localId: string;
-  file: File;
-  kind: "image" | "video";
+  file?: File;
+  fileName: string;
+  sizeBytes: number;
+  kind: "image" | "video" | "document";
   previewUrl: string;
   status: MediaStatus;
   error?: string;
+  sourceBucket?: string;
   sourcePath?: string;
   recordId?: string;
   isPrimary?: boolean;
@@ -148,6 +158,42 @@ const PROPERTY_OPTIONS: ReadonlyArray<{
     description: "Apartamentos y unidades en edificios.",
     icon: "▥",
   },
+  {
+    value: "condominium",
+    label: "Condominio",
+    description: "Unidades residenciales en condominio.",
+    icon: "⌂",
+  },
+  {
+    value: "commercial",
+    label: "Local comercial",
+    description: "Espacios para comercio o servicios.",
+    icon: "▣",
+  },
+  {
+    value: "office",
+    label: "Oficina",
+    description: "Oficinas y espacios profesionales.",
+    icon: "▤",
+  },
+  {
+    value: "warehouse",
+    label: "Bodega",
+    description: "Bodegas y espacios logísticos.",
+    icon: "▰",
+  },
+  {
+    value: "farm",
+    label: "Finca",
+    description: "Fincas, parcelas y uso rural.",
+    icon: "♧",
+  },
+  {
+    value: "building",
+    label: "Edificio",
+    description: "Edificios completos e inmuebles mixtos.",
+    icon: "▥",
+  },
 ];
 
 const OPERATION_OPTIONS: ReadonlyArray<{
@@ -164,6 +210,11 @@ const OPERATION_OPTIONS: ReadonlyArray<{
     value: "rent",
     label: "Alquiler",
     description: "Renta periódica, inicialmente mensual.",
+  },
+  {
+    value: "short_term_rent",
+    label: "Corta estancia",
+    description: "Hospedaje por noche, día o semana.",
   },
 ];
 
@@ -214,6 +265,91 @@ const DEFAULT_FORM: WizardForm = {
   longitude: "",
   precision: "approximate",
 };
+
+function valueToInput(value: number | null) {
+  return value === null ? "" : String(value);
+}
+
+function isLandListing(propertyType: PropertyType) {
+  return propertyType === "land" || propertyType === "farm";
+}
+
+function isEditablePublicationStatus(
+  value: ListingRow["publication_status"],
+): value is EditablePublicationStatus {
+  return value === "draft" || value === "rejected";
+}
+
+function initialForm(
+  initialListing: ListingWizardInitialListing | undefined,
+  preferredOrganizationId: string,
+): WizardForm {
+  if (!initialListing) {
+    return {
+      ...DEFAULT_FORM,
+      organizationId: preferredOrganizationId,
+    };
+  }
+
+  return {
+    organizationId: initialListing.organizationId,
+    propertyType: initialListing.propertyType,
+    operationType: initialListing.operationType,
+    title: initialListing.title,
+    description: initialListing.description,
+    priceAmount: valueToInput(initialListing.priceAmount),
+    priceOnRequest: initialListing.priceOnRequest,
+    currencyCode: initialListing.currencyCode,
+    pricePeriod: initialListing.pricePeriod,
+    bedrooms: valueToInput(initialListing.bedrooms),
+    bathrooms: valueToInput(initialListing.bathrooms),
+    parkingSpaces: valueToInput(initialListing.parkingSpaces),
+    landArea: valueToInput(initialListing.landArea),
+    landAreaUnit: initialListing.landAreaUnit ?? "m2",
+    constructionArea: valueToInput(initialListing.constructionArea),
+    constructionAreaUnit: initialListing.constructionAreaUnit ?? "m2",
+    yearBuilt: valueToInput(initialListing.yearBuilt),
+    department: initialListing.location.department,
+    municipality: initialListing.location.municipality,
+    city: initialListing.location.city ?? "",
+    zone: initialListing.location.zone ?? "",
+    visibleAddress: initialListing.location.privateAddress ?? "",
+    latitude: String(initialListing.location.exactLatitude),
+    longitude: String(initialListing.location.exactLongitude),
+    precision: initialListing.location.precision,
+  };
+}
+
+function initialDraft(
+  initialListing: ListingWizardInitialListing | undefined,
+): DraftReference | null {
+  if (!initialListing) return null;
+
+  return {
+    id: initialListing.id,
+    slug: initialListing.slug,
+    publicationStatus: initialListing.publicationStatus,
+    version: initialListing.version,
+    availabilityStatus: initialListing.availabilityStatus,
+  };
+}
+
+function initialMedia(
+  initialListing: ListingWizardInitialListing | undefined,
+): MediaItem[] {
+  return (initialListing?.media ?? []).map((media) => ({
+    localId: media.id,
+    fileName: media.fileName,
+    sizeBytes: media.sizeBytes,
+    kind: media.kind,
+    previewUrl: media.previewUrl,
+    status: "uploaded",
+    sourceBucket: media.sourceBucket,
+    sourcePath: media.sourcePath,
+    recordId: media.id,
+    isPrimary: media.isPrimary,
+  }));
+}
 
 const FIELD_STEP: Record<FormField, number> = {
   organizationId: 0,
@@ -287,16 +423,31 @@ function getRpcRows<T>(data: unknown, label: string) {
 }
 
 function presentError(error: unknown) {
-  if (error instanceof Error && error.message) return error.message;
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof error.message === "string"
+        ? error.message
+        : "";
 
   if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof error.message === "string"
+    /add a valid public email, phone and whatsapp number/i.test(message)
   ) {
-    return error.message;
+    return "Antes de enviar el anuncio, completa un correo, teléfono y WhatsApp válidos en Mi perfil. Así las personas interesadas podrán contactarte con seguridad.";
   }
+
+  if (/seller contact must actively manage this listing/i.test(message)) {
+    return "La persona de contacto debe ser un miembro activo que administre esta propiedad. Revisa la configuración de la cuenta antes de enviarla.";
+  }
+
+  if (/stale listing version/i.test(message)) {
+    return "Este anuncio cambió en otra sesión. Recarga la página para revisar la versión más reciente antes de continuar.";
+  }
+
+  if (message) return message;
 
   return "Ocurrió un error inesperado. Inténtalo de nuevo.";
 }
@@ -324,6 +475,7 @@ function FieldError({
 export function ListingPublicationWizard({
   organizations,
   initialOrganizationId,
+  initialListing,
   className,
   onDraftSaved,
   onSubmitted,
@@ -340,18 +492,23 @@ export function ListingPublicationWizard({
       : organizations[0]?.id ?? "";
 
   const [step, setStep] = useState(0);
-  const [furthestStep, setFurthestStep] = useState(0);
-  const [form, setForm] = useState<WizardForm>(() => ({
-    ...DEFAULT_FORM,
-    organizationId: preferredOrganizationId,
-  }));
+  const [furthestStep, setFurthestStep] = useState(
+    initialListing ? STEPS.length - 1 : 0,
+  );
+  const [form, setForm] = useState<WizardForm>(() =>
+    initialForm(initialListing, preferredOrganizationId),
+  );
   const [errors, setErrors] = useState<FormErrors>({});
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [globalError, setGlobalError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [draft, setDraft] = useState<DraftReference | null>(null);
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [draft, setDraft] = useState<DraftReference | null>(() =>
+    initialDraft(initialListing),
+  );
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>(() =>
+    initialMedia(initialListing),
+  );
   const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
   const [dragOverMediaId, setDragOverMediaId] = useState<string | null>(null);
   const [removingMediaId, setRemovingMediaId] = useState<string | null>(null);
@@ -360,6 +517,8 @@ export function ListingPublicationWizard({
 
   const isBusy = busyAction !== null || removingMediaId !== null;
   const isSubmitted = draft?.publicationStatus === "pending_review";
+  const isPublishedRevision = draft?.publicationStatus === "published";
+  const isEditingExistingListing = Boolean(initialListing);
   const selectedOrganization = organizations.find(
     ({ id }) => id === form.organizationId,
   );
@@ -405,6 +564,8 @@ export function ListingPublicationWizard({
   }
 
   function updateMapCoordinates(latitude: string, longitude: string) {
+    if (isPublishedRevision) return;
+
     setForm((current) => ({ ...current, latitude, longitude }));
     setErrors((current) => ({
       ...current,
@@ -424,6 +585,8 @@ export function ListingPublicationWizard({
       >
     >,
   ) {
+    if (isPublishedRevision) return;
+
     setForm((current) => ({
       ...current,
       city: details.city?.trim() || current.city,
@@ -444,7 +607,7 @@ export function ListingPublicationWizard({
   function selectPropertyType(value: PropertyType) {
     updateField("propertyType", value);
 
-    if (value === "land") {
+    if (isLandListing(value)) {
       setForm((current) => ({
         ...current,
         bedrooms: "",
@@ -460,7 +623,12 @@ export function ListingPublicationWizard({
     setForm((current) => ({
       ...current,
       operationType: value,
-      pricePeriod: value === "sale" ? "total" : "monthly",
+      pricePeriod:
+        value === "sale"
+          ? "total"
+          : value === "short_term_rent"
+            ? "nightly"
+            : "monthly",
     }));
     setErrors((current) => ({
       ...current,
@@ -506,7 +674,7 @@ export function ListingPublicationWizard({
         nextErrors.priceAmount = "Ingresa un precio válido.";
       }
 
-      if (form.propertyType === "land") {
+      if (isLandListing(form.propertyType)) {
         if (landArea === null || landArea <= 0) {
           nextErrors.landArea = "El área del terreno es obligatoria.";
         }
@@ -637,7 +805,7 @@ export function ListingPublicationWizard({
   }
 
   function buildCreateListingArgs(slug: string) {
-    const isLand = form.propertyType === "land";
+    const isLand = isLandListing(form.propertyType);
     const priceAmount = form.priceOnRequest
       ? null
       : toNullableNumber(form.priceAmount);
@@ -673,7 +841,7 @@ export function ListingPublicationWizard({
   }
 
   function buildListingUpdate(): ListingUpdate {
-    const isLand = form.propertyType === "land";
+    const isLand = isLandListing(form.propertyType);
     const landArea = toNullableNumber(form.landArea);
     const constructionArea = isLand
       ? null
@@ -685,7 +853,7 @@ export function ListingPublicationWizard({
       description: form.description.trim(),
       operation_type: form.operationType,
       property_type: form.propertyType,
-      availability_status: "available",
+      availability_status: draft?.availabilityStatus ?? "available",
       price_amount: form.priceOnRequest
         ? null
         : toNullableNumber(form.priceAmount),
@@ -704,6 +872,49 @@ export function ListingPublicationWizard({
       construction_area_unit:
         constructionArea === null ? null : form.constructionAreaUnit,
       year_built: isLand ? null : toNullableNumber(form.yearBuilt),
+    };
+  }
+
+  function buildPublishedRevisionArgs(currentDraft: DraftReference) {
+    const isLand = isLandListing(form.propertyType);
+    const landArea = toNullableNumber(form.landArea);
+    const constructionArea = isLand
+      ? null
+      : toNullableNumber(form.constructionArea);
+    const orderedMediaIds = mediaItems.map((item) => item.recordId);
+
+    if (orderedMediaIds.some((mediaId) => !mediaId)) {
+      throw new Error(
+        "No se pudo confirmar el orden de todos los archivos multimedia.",
+      );
+    }
+
+    return {
+      p_listing_id: currentDraft.id,
+      p_expected_version: currentDraft.version,
+      p_ordered_media_ids: orderedMediaIds as string[],
+      p_title: form.title.trim(),
+      p_description: form.description.trim(),
+      p_operation_type: form.operationType,
+      p_property_type: form.propertyType,
+      p_price_amount: form.priceOnRequest
+        ? null
+        : toNullableNumber(form.priceAmount),
+      p_price_on_request: form.priceOnRequest,
+      p_currency_code: form.currencyCode,
+      p_price_period:
+        form.operationType === "sale" ? "total" : form.pricePeriod,
+      p_bedrooms: isLand ? null : toNullableNumber(form.bedrooms),
+      p_bathrooms: isLand ? null : toNullableNumber(form.bathrooms),
+      p_parking_spaces: isLand
+        ? null
+        : toNullableNumber(form.parkingSpaces),
+      p_land_area: landArea,
+      p_land_area_unit: landArea === null ? null : form.landAreaUnit,
+      p_construction_area: constructionArea,
+      p_construction_area_unit:
+        constructionArea === null ? null : form.constructionAreaUnit,
+      p_year_built: isLand ? null : toNullableNumber(form.yearBuilt),
     };
   }
 
@@ -785,6 +996,7 @@ export function ListingPublicationWizard({
       slug: insertedListing.slug,
       publicationStatus: "draft",
       version: insertedListing.version,
+      availabilityStatus: insertedListing.availability_status,
     };
 
     setDraft(reference);
@@ -797,7 +1009,8 @@ export function ListingPublicationWizard({
       .update(buildListingUpdate())
       .eq("id", currentDraft.id)
       .eq("organization_id", form.organizationId)
-      .eq("publication_status", "draft")
+      .eq("version", currentDraft.version)
+      .in("publication_status", ["draft", "rejected"])
       .select("id, slug, publication_status, version")
       .single();
 
@@ -807,24 +1020,27 @@ export function ListingPublicationWizard({
 
     await saveDraftLocation(currentDraft.id);
 
-    if (updatedListing.publication_status !== "draft") {
-      throw new Error("El anuncio ya no está disponible como borrador.");
+    if (!isEditablePublicationStatus(updatedListing.publication_status)) {
+      throw new Error("El anuncio ya no está disponible para editar.");
     }
 
     const reference: DraftReference = {
       id: updatedListing.id,
       slug: updatedListing.slug,
-      publicationStatus: "draft",
+      publicationStatus: updatedListing.publication_status,
       version: updatedListing.version,
+      availabilityStatus: currentDraft.availabilityStatus,
     };
     setDraft(reference);
     return reference;
   }
 
   async function persistDraft() {
-    const reference = draft
-      ? await updateDraft(draft)
-      : await createDraft();
+    if (draft?.publicationStatus === "published") {
+      throw new Error("Los anuncios publicados deben enviarse nuevamente a revisión.");
+    }
+
+    const reference = draft ? await updateDraft(draft) : await createDraft();
 
     return reference;
   }
@@ -842,19 +1058,26 @@ export function ListingPublicationWizard({
 
   async function uploadPendingMedia(listingId: string) {
     const pendingItems = mediaItems.filter(
-      ({ status }) => status !== "uploaded",
+      ({ file, status }) => status !== "uploaded" && Boolean(file),
     );
     const registeredByLocalId = new Map<string, MediaRow>();
     if (pendingItems.length === 0) return registeredByLocalId;
 
     for (const [index, item] of pendingItems.entries()) {
-      const extension = ALLOWED_MEDIA_TYPES.get(item.file.type);
+      const file = item.file;
+      if (!file) continue;
+
+      if (item.kind === "document") {
+        throw new Error("Ese tipo de archivo no se puede subir desde este formulario.");
+      }
+
+      const extension = ALLOWED_MEDIA_TYPES.get(file.type);
       if (!extension) {
         setMediaStatus(item.localId, {
           status: "error",
           error: "Formato no permitido.",
         });
-        throw new Error(`El archivo “${item.file.name}” no es compatible.`);
+        throw new Error(`El archivo “${file.name}” no es compatible.`);
       }
 
       let registeredMedia: MediaRow | undefined;
@@ -873,8 +1096,8 @@ export function ListingPublicationWizard({
           {
             p_listing_id: listingId,
             p_media_type: item.kind,
-            p_mime_type: item.file.type,
-            p_size_bytes: item.file.size,
+            p_mime_type: file.type,
+            p_size_bytes: file.size,
             p_extension: extension,
             p_media_id: item.localId,
           },
@@ -893,9 +1116,9 @@ export function ListingPublicationWizard({
         );
         const { error: uploadError } = await supabase.storage
           .from("listing-drafts")
-          .upload(registeredMedia.source_path, item.file, {
+          .upload(registeredMedia.source_path, file, {
             cacheControl: "3600",
-            contentType: item.file.type,
+            contentType: file.type,
             // A retry overwrites only this user's deterministic object path.
             upsert: true,
           });
@@ -909,7 +1132,7 @@ export function ListingPublicationWizard({
           recordId: registeredMedia?.id ?? item.recordId,
           isPrimary: registeredMedia?.is_primary ?? item.isPrimary,
         });
-        throw new Error(`No se pudo subir “${item.file.name}”.`);
+        throw new Error(`No se pudo subir “${file.name}”.`);
       }
 
       setMediaStatus(item.localId, {
@@ -974,7 +1197,9 @@ export function ListingPublicationWizard({
   }
 
   async function handleSaveDraft() {
-    if (isBusy || isSubmitted || !applyValidation(2)) return;
+    if (isBusy || isSubmitted || isPublishedRevision || !applyValidation(2)) {
+      return;
+    }
 
     setBusyAction("saving");
     setGlobalError("");
@@ -1021,8 +1246,31 @@ export function ListingPublicationWizard({
     return submittedListing;
   }
 
+  async function submitPublishedRevision(reference: DraftReference) {
+    const submittedListing = await invokePublicRpc<ListingRow>(
+      "submit_published_listing_revision_with_media",
+      buildPublishedRevisionArgs(reference),
+      "el anuncio actualizado",
+    );
+
+    if (submittedListing.publication_status !== "pending_review") {
+      throw new Error("El servidor no confirmó el envío de los cambios a revisión.");
+    }
+
+    return submittedListing;
+  }
+
   async function handleSubmitForReview() {
-    if (isBusy || isSubmitted || !applyValidation(3, true)) return;
+    const validationTarget = isPublishedRevision ? 1 : 3;
+    const requiresMedia = !isPublishedRevision;
+
+    if (
+      isBusy ||
+      isSubmitted ||
+      !applyValidation(validationTarget, requiresMedia)
+    ) {
+      return;
+    }
 
     setBusyAction("submitting");
     setGlobalError("");
@@ -1030,6 +1278,27 @@ export function ListingPublicationWizard({
     setStatusMessage("Preparando el anuncio…");
 
     try {
+      if (draft?.publicationStatus === "published") {
+        setStatusMessage("Enviando los cambios a revisión…");
+        const submittedListing = await submitPublishedRevision(draft);
+
+        setDraft({
+          id: submittedListing.id,
+          slug: submittedListing.slug,
+          publicationStatus: "pending_review",
+          version: submittedListing.version,
+          availabilityStatus: submittedListing.availability_status,
+        });
+        setLastSavedAt(new Date());
+        setIsDirty(false);
+        setStatusMessage("");
+        setSuccessMessage(
+          "Tus cambios fueron enviados a revisión. Mientras los evaluamos, esta propiedad dejará temporalmente de aparecer en el catálogo público; volverá al aprobarse.",
+        );
+        onSubmitted?.(submittedListing.id);
+        return;
+      }
+
       const reference = await persistDraft();
       const registeredMedia = await uploadPendingMedia(reference.id);
       await persistMediaOrder(reference.id, registeredMedia);
@@ -1042,6 +1311,7 @@ export function ListingPublicationWizard({
         slug: submittedListing.slug,
         publicationStatus: "pending_review",
         version: submittedListing.version,
+        availabilityStatus: submittedListing.availability_status,
       });
       setLastSavedAt(new Date());
       setIsDirty(false);
@@ -1093,7 +1363,9 @@ export function ListingPublicationWizard({
   }
 
   function moveMediaToPosition(sourceId: string, targetId: string) {
-    if (isBusy || isSubmitted || sourceId === targetId) return;
+    if (isBusy || isSubmitted || sourceId === targetId) {
+      return;
+    }
 
     setMediaItems((current) => {
       const sourceIndex = current.findIndex(
@@ -1180,6 +1452,8 @@ export function ListingPublicationWizard({
   }
 
   function handleMediaSelection(event: ChangeEvent<HTMLInputElement>) {
+    if (isBusy || isSubmitted || isPublishedRevision) return;
+
     const input = event.currentTarget;
     const selectedFiles = Array.from(input.files ?? []);
     input.value = "";
@@ -1214,6 +1488,8 @@ export function ListingPublicationWizard({
       accepted.push({
         localId: crypto.randomUUID(),
         file,
+        fileName: file.name,
+        sizeBytes: file.size,
         kind: file.type.startsWith("image/") ? "image" : "video",
         previewUrl,
         status: "pending",
@@ -1238,6 +1514,7 @@ export function ListingPublicationWizard({
     if (
       !item ||
       isBusy ||
+      isPublishedRevision ||
       item.status === "uploading" ||
       item.status === "removing"
     ) {
@@ -1263,7 +1540,7 @@ export function ListingPublicationWizard({
         const sourcePath = storedMedia?.source_path ?? item.sourcePath;
         if (storedMedia && sourcePath) {
           const { error: storageError } = await supabase.storage
-            .from("listing-drafts")
+            .from(item.sourceBucket ?? "listing-drafts")
             .remove([sourcePath]);
           if (storageError) throw storageError;
         }
@@ -1284,8 +1561,9 @@ export function ListingPublicationWizard({
         }
       }
 
-      URL.revokeObjectURL(item.previewUrl);
-      previewUrlsRef.current.delete(item.previewUrl);
+      if (previewUrlsRef.current.delete(item.previewUrl)) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
       setMediaItems((current) =>
         current.filter((candidate) => candidate.localId !== localId),
       );
@@ -1306,6 +1584,8 @@ export function ListingPublicationWizard({
   }
 
   function renderStep() {
+    const fieldsLocked = isBusy || isSubmitted;
+
     if (step === 0) {
       return (
         <div className={styles.stepBody}>
@@ -1320,7 +1600,7 @@ export function ListingPublicationWizard({
                   : undefined
               }
               aria-invalid={Boolean(errors.organizationId)}
-              disabled={Boolean(draft) || isBusy}
+              disabled={Boolean(draft) || fieldsLocked}
               id={fieldId("organizationId")}
               onChange={(event) =>
                 updateField("organizationId", event.currentTarget.value)
@@ -1363,7 +1643,7 @@ export function ListingPublicationWizard({
                 >
                   <input
                     checked={form.propertyType === option.value}
-                    disabled={isBusy}
+                    disabled={fieldsLocked}
                     name={`${instanceId}-property-type`}
                     onChange={() => selectPropertyType(option.value)}
                     type="radio"
@@ -1393,7 +1673,7 @@ export function ListingPublicationWizard({
                 >
                   <input
                     checked={form.operationType === option.value}
-                    disabled={isBusy}
+                    disabled={fieldsLocked}
                     name={`${instanceId}-operation-type`}
                     onChange={() => selectOperationType(option.value)}
                     type="radio"
@@ -1412,7 +1692,7 @@ export function ListingPublicationWizard({
     }
 
     if (step === 1) {
-      const isLand = form.propertyType === "land";
+      const isLand = isLandListing(form.propertyType);
 
       return (
         <div className={styles.stepBody}>
@@ -1426,7 +1706,7 @@ export function ListingPublicationWizard({
                 errors.title && fieldErrorId("title"),
               )}
               aria-invalid={Boolean(errors.title)}
-              disabled={isBusy}
+              disabled={fieldsLocked}
               id={fieldId("title")}
               maxLength={180}
               minLength={10}
@@ -1458,7 +1738,7 @@ export function ListingPublicationWizard({
                 errors.description && fieldErrorId("description"),
               )}
               aria-invalid={Boolean(errors.description)}
-              disabled={isBusy}
+              disabled={fieldsLocked}
               id={fieldId("description")}
               maxLength={20_000}
               minLength={40}
@@ -1485,7 +1765,7 @@ export function ListingPublicationWizard({
             <label className={styles.checkbox}>
               <input
                 checked={form.priceOnRequest}
-                disabled={isBusy}
+                disabled={fieldsLocked}
                 onChange={(event) =>
                   updateField("priceOnRequest", event.currentTarget.checked)
                 }
@@ -1510,7 +1790,7 @@ export function ListingPublicationWizard({
                         : undefined
                     }
                     aria-invalid={Boolean(errors.priceAmount)}
-                    disabled={isBusy}
+                    disabled={fieldsLocked}
                     id={fieldId("priceAmount")}
                     inputMode="decimal"
                     min="0"
@@ -1530,7 +1810,7 @@ export function ListingPublicationWizard({
                 <div className={styles.field}>
                   <label htmlFor={fieldId("currencyCode")}>Moneda</label>
                   <select
-                    disabled={isBusy}
+                    disabled={fieldsLocked}
                     id={fieldId("currencyCode")}
                     onChange={(event) =>
                       updateField(
@@ -1548,7 +1828,7 @@ export function ListingPublicationWizard({
                 <div className={styles.field}>
                   <label htmlFor={fieldId("pricePeriod")}>Periodo</label>
                   <select
-                    disabled={isBusy || form.operationType === "sale"}
+                  disabled={fieldsLocked || form.operationType === "sale"}
                     id={fieldId("pricePeriod")}
                     onChange={(event) =>
                       updateField(
@@ -1566,6 +1846,9 @@ export function ListingPublicationWizard({
                       <option value="total">Precio total</option>
                     ) : (
                       <>
+                        {form.operationType === "short_term_rent" ? (
+                          <option value="nightly">Por noche</option>
+                        ) : null}
                         <option value="monthly">Mensual</option>
                         <option value="yearly">Anual</option>
                         <option value="weekly">Semanal</option>
@@ -1583,7 +1866,7 @@ export function ListingPublicationWizard({
               <legend>Características</legend>
               <div className={styles.formGridThree}>
                 <NumberField
-                  disabled={isBusy}
+                  disabled={fieldsLocked}
                   error={errors.bedrooms}
                   id={fieldId("bedrooms")}
                   label="Habitaciones"
@@ -1593,7 +1876,7 @@ export function ListingPublicationWizard({
                   value={form.bedrooms}
                 />
                 <NumberField
-                  disabled={isBusy}
+                  disabled={fieldsLocked}
                   error={errors.bathrooms}
                   id={fieldId("bathrooms")}
                   label="Baños"
@@ -1603,7 +1886,7 @@ export function ListingPublicationWizard({
                   value={form.bathrooms}
                 />
                 <NumberField
-                  disabled={isBusy}
+                  disabled={fieldsLocked}
                   error={errors.parkingSpaces}
                   id={fieldId("parkingSpaces")}
                   label="Estacionamientos"
@@ -1620,7 +1903,7 @@ export function ListingPublicationWizard({
             <legend>Áreas</legend>
             <div className={styles.formGridTwo}>
               <AreaField
-                disabled={isBusy}
+                disabled={fieldsLocked}
                 error={errors.landArea}
                 id={fieldId("landArea")}
                 label={isLand ? "Área del terreno *" : "Área del terreno"}
@@ -1631,7 +1914,7 @@ export function ListingPublicationWizard({
               />
               {!isLand ? (
                 <AreaField
-                  disabled={isBusy}
+                  disabled={fieldsLocked}
                   error={errors.constructionArea}
                   id={fieldId("constructionArea")}
                   label="Área de construcción *"
@@ -1651,7 +1934,7 @@ export function ListingPublicationWizard({
           {!isLand ? (
             <div className={styles.fieldNarrow}>
               <NumberField
-                disabled={isBusy}
+                disabled={fieldsLocked}
                 error={errors.yearBuilt}
                 id={fieldId("yearBuilt")}
                 label="Año de construcción"
@@ -1668,8 +1951,23 @@ export function ListingPublicationWizard({
     }
 
     if (step === 2) {
+      const locationLocked = isBusy || isSubmitted || isPublishedRevision;
+
       return (
         <div className={styles.stepBody}>
+          {isPublishedRevision ? (
+            <div className={styles.revisionLockNotice} role="note">
+              <span aria-hidden="true">⌖</span>
+              <div>
+                <strong>La ubicación se conserva en esta revisión</strong>
+                <p>
+                  Para proteger a las personas interesadas y mantener la
+                  verificación vigente, los cambios de mapa y dirección se
+                  gestionan por separado con el equipo de Zelaya Raíces.
+                </p>
+              </div>
+            </div>
+          ) : null}
           <div className={styles.locationNotice}>
             <span aria-hidden="true">⌖</span>
             <div>
@@ -1682,7 +1980,7 @@ export function ListingPublicationWizard({
           </div>
 
           <LocationMapPicker
-            disabled={isBusy || isSubmitted}
+            disabled={locationLocked}
             latitude={form.latitude}
             longitude={form.longitude}
             onCoordinatesChange={updateMapCoordinates}
@@ -1691,7 +1989,7 @@ export function ListingPublicationWizard({
 
           <div className={styles.formGridTwo}>
             <TextField
-              disabled={isBusy}
+              disabled={locationLocked}
               error={errors.department}
               id={fieldId("department")}
               label="Departamento *"
@@ -1700,7 +1998,7 @@ export function ListingPublicationWizard({
               value={form.department}
             />
             <TextField
-              disabled={isBusy}
+              disabled={locationLocked}
               error={errors.municipality}
               id={fieldId("municipality")}
               label="Municipio *"
@@ -1709,7 +2007,7 @@ export function ListingPublicationWizard({
               value={form.municipality}
             />
             <TextField
-              disabled={isBusy}
+              disabled={locationLocked}
               id={fieldId("city")}
               label="Ciudad"
               onChange={(value) => updateField("city", value)}
@@ -1717,7 +2015,7 @@ export function ListingPublicationWizard({
               value={form.city}
             />
             <TextField
-              disabled={isBusy}
+              disabled={locationLocked}
               id={fieldId("zone")}
               label="Zona, barrio o residencial"
               onChange={(value) => updateField("zone", value)}
@@ -1727,7 +2025,7 @@ export function ListingPublicationWizard({
           </div>
 
           <TextField
-            disabled={isBusy}
+            disabled={locationLocked}
             id={fieldId("visibleAddress")}
             label="Dirección exacta o indicaciones privadas"
             maxLength={500}
@@ -1745,7 +2043,7 @@ export function ListingPublicationWizard({
             </p>
             <div className={styles.formGridThree}>
               <NumberField
-                disabled={isBusy}
+                disabled={locationLocked}
                 error={errors.latitude}
                 id={fieldId("latitude")}
                 label="Latitud seleccionada *"
@@ -1757,7 +2055,7 @@ export function ListingPublicationWizard({
                 value={form.latitude}
               />
               <NumberField
-                disabled={isBusy}
+                disabled={locationLocked}
                 error={errors.longitude}
                 id={fieldId("longitude")}
                 label="Longitud seleccionada *"
@@ -1771,7 +2069,7 @@ export function ListingPublicationWizard({
               <div className={styles.field}>
                 <label htmlFor={fieldId("precision")}>Referencia pública</label>
                 <select
-                  disabled={isBusy}
+                  disabled={locationLocked}
                   id={fieldId("precision")}
                   onChange={(event) =>
                     updateField(
@@ -1791,9 +2089,25 @@ export function ListingPublicationWizard({
       );
     }
 
+    const mediaOrderLocked = isBusy || isSubmitted;
+    const mediaContentLocked = mediaOrderLocked || isPublishedRevision;
+
     return (
       <div className={styles.stepBody}>
         <div className={styles.mediaSection}>
+          {isPublishedRevision ? (
+            <div className={styles.revisionLockNotice} role="note">
+              <span aria-hidden="true">▧</span>
+              <div>
+                <strong>Reordena la galería para esta revisión</strong>
+                <p>
+                  Puedes definir qué foto o video aparecerá primero y elegir la
+                  portada. Para proteger la revisión, agregar o quitar archivos
+                  sigue bloqueado en un anuncio ya publicado.
+                </p>
+              </div>
+            </div>
+          ) : null}
           <div className={styles.mediaHeading}>
             <div>
               <h3>Fotografías y videos</h3>
@@ -1822,7 +2136,7 @@ export function ListingPublicationWizard({
               }
               aria-invalid={Boolean(errors.media)}
               disabled={
-                isBusy || isSubmitted || mediaItems.length >= MAX_MEDIA_ITEMS
+                mediaContentLocked || mediaItems.length >= MAX_MEDIA_ITEMS
               }
               id={fieldId("media")}
               multiple
@@ -1855,7 +2169,7 @@ export function ListingPublicationWizard({
                         styles.mediaCardDropTarget,
                     )}
                     data-position={index + 1}
-                    draggable={!isBusy && !isSubmitted && mediaItems.length > 1}
+                    draggable={!mediaOrderLocked && mediaItems.length > 1}
                     key={item.localId}
                     onDragEnd={handleMediaDragEnd}
                     onDragOver={(event) =>
@@ -1866,18 +2180,24 @@ export function ListingPublicationWizard({
                     }
                     onDrop={(event) => handleMediaDrop(event, item.localId)}
                   >
-                    {item.kind === "image" ? (
-                      // The source is a local object URL chosen by the user.
+                    {item.kind === "image" && item.previewUrl ? (
+                      // The source is either a local object URL or a short-lived
+                      // signed URL created for an already-uploaded draft asset.
                       // eslint-disable-next-line @next/next/no-img-element
                       <img alt="" src={item.previewUrl} />
-                    ) : (
+                    ) : item.kind === "video" && item.previewUrl ? (
                       <video
-                        aria-label={`Vista previa de ${item.file.name}`}
+                        aria-label={`Vista previa de ${item.fileName}`}
                         muted
                         playsInline
                         preload="metadata"
                         src={item.previewUrl}
                       />
+                    ) : (
+                      <div className={styles.mediaDocument}>
+                        <span aria-hidden="true">▤</span>
+                        <small>Documento o recurso</small>
+                      </div>
                     )}
                     <div className={styles.mediaOverlay}>
                       <span
@@ -1897,9 +2217,9 @@ export function ListingPublicationWizard({
                       {item.status !== "uploading" &&
                       item.status !== "removing" ? (
                         <button
-                          aria-label={`Quitar ${item.file.name}`}
+                          aria-label={`Quitar ${item.fileName}`}
                           className={styles.removeMedia}
-                          disabled={isBusy || isSubmitted}
+                          disabled={mediaContentLocked}
                           onClick={() => void removePendingMedia(item.localId)}
                           type="button"
                         >
@@ -1914,19 +2234,19 @@ export function ListingPublicationWizard({
                           {index === 0 ? "Se verá primero" : "Orden de galería"}
                         </small>
                       </div>
-                      <strong title={item.file.name}>{item.file.name}</strong>
-                      <span>{(item.file.size / 1024 / 1024).toFixed(1)} MB</span>
+                      <strong title={item.fileName}>{item.fileName}</strong>
+                      <span>{(item.sizeBytes / 1024 / 1024).toFixed(1)} MB</span>
                       {item.error ? (
                         <small className={styles.mediaError}>{item.error}</small>
                       ) : null}
                       <div
                         className={styles.mediaControls}
-                        aria-label={`Orden de ${item.file.name}`}
+                        aria-label={`Orden de ${item.fileName}`}
                         role="group"
                       >
                         <button
-                          aria-label={`Mover ${item.file.name} antes`}
-                          disabled={isBusy || isSubmitted || index === 0}
+                          aria-label={`Mover ${item.fileName} antes`}
+                          disabled={mediaOrderLocked || index === 0}
                           onClick={() => moveMediaByOffset(item.localId, -1)}
                           title="Mover antes"
                           type="button"
@@ -1934,10 +2254,9 @@ export function ListingPublicationWizard({
                           ←
                         </button>
                         <button
-                          aria-label={`Mover ${item.file.name} después`}
+                          aria-label={`Mover ${item.fileName} después`}
                           disabled={
-                            isBusy ||
-                            isSubmitted ||
+                            mediaOrderLocked ||
                             index === mediaItems.length - 1
                           }
                           onClick={() => moveMediaByOffset(item.localId, 1)}
@@ -1951,7 +2270,7 @@ export function ListingPublicationWizard({
                         ) : item.kind === "image" ? (
                           <button
                             className={styles.coverButton}
-                            disabled={isBusy || isSubmitted}
+                            disabled={mediaOrderLocked}
                             onClick={() => makeMediaCover(item.localId)}
                             type="button"
                           >
@@ -2036,8 +2355,11 @@ export function ListingPublicationWizard({
           <div className={styles.reviewNote}>
             <span aria-hidden="true">✓</span>
             <p>
-              El anuncio se guardará como borrador. Al enviarlo, Zelaya Raíces
-              revisará la información antes de publicarla.
+              {isPublishedRevision
+                ? "Al reenviar estos cambios, la propiedad saldrá temporalmente del catálogo público mientras Zelaya Raíces la revisa. Volverá a mostrarse al aprobarse."
+                : isEditingExistingListing
+                ? "Los cambios se guardarán en este anuncio. Cuando lo envíes, Zelaya Raíces revisará nuevamente la información antes de publicarla."
+                : "El anuncio se guardará como borrador. Al enviarlo, Zelaya Raíces revisará la información antes de publicarla."}
             </p>
           </div>
         </div>
@@ -2068,9 +2390,15 @@ export function ListingPublicationWizard({
       <header className={styles.wizardHeader}>
         <div>
           <p className={styles.eyebrow}>Asistente de publicación</p>
-          <h2 id={`${instanceId}-wizard-title`}>Nueva propiedad</h2>
+          <h2 id={`${instanceId}-wizard-title`}>
+            {isEditingExistingListing ? "Editar propiedad" : "Nueva propiedad"}
+          </h2>
           <p>
-            Completa la información paso a paso. Nada se publica sin revisión.
+            {isPublishedRevision
+              ? "Actualiza los datos principales y el orden de tu galería; los cambios pasarán nuevamente por revisión. La ubicación se mantendrá protegida."
+              : isEditingExistingListing
+              ? "Actualiza el anuncio a tu ritmo. Podrás guardar el borrador o enviarlo nuevamente a revisión."
+              : "Completa la información paso a paso. Nada se publica sin revisión."}
           </p>
         </div>
         <span className={styles.trustBadge}>
@@ -2167,7 +2495,9 @@ export function ListingPublicationWizard({
             ) : isDirty ? (
               "Cambios sin guardar"
             ) : (
-              "El borrador se guardará al completar la ubicación."
+              isPublishedRevision
+                ? "Los cambios se enviarán a revisión al confirmar."
+                : "El borrador se guardará al completar la ubicación."
             )}
           </div>
 
@@ -2185,10 +2515,12 @@ export function ListingPublicationWizard({
 
             <button
               className={styles.ghostButton}
-              disabled={isBusy || isSubmitted || step < 2}
+              disabled={isBusy || isSubmitted || isPublishedRevision || step < 2}
               onClick={() => void handleSaveDraft()}
               title={
-                step < 2
+                isPublishedRevision
+                  ? "Los cambios de una publicación activa deben enviarse a revisión"
+                  : step < 2
                   ? "Completa primero los detalles y la ubicación"
                   : undefined
               }
@@ -2216,7 +2548,9 @@ export function ListingPublicationWizard({
                   ? "Enviando…"
                   : isSubmitted
                     ? "Enviado a revisión"
-                    : "Enviar a revisión"}
+                    : isPublishedRevision
+                      ? "Guardar cambios y reenviar a revisión"
+                      : "Enviar a revisión"}
                 {!isBusy && !isSubmitted ? (
                   <span aria-hidden="true">→</span>
                 ) : null}

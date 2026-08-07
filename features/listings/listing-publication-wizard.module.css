@@ -572,6 +572,40 @@
   background: #fbf8ef;
 }
 
+.revisionLockNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  border: 1px solid rgba(184, 96, 67, 0.3);
+  border-radius: 14px;
+  padding: 17px;
+  background: #fff7f2;
+}
+
+.revisionLockNotice > span {
+  display: grid;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(184, 96, 67, 0.14);
+  color: var(--wizard-accent);
+  font-size: 18px;
+}
+
+.revisionLockNotice strong {
+  color: var(--wizard-green);
+  font-size: 12px;
+}
+
+.revisionLockNotice p {
+  margin: 3px 0 0;
+  color: var(--wizard-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .locationNotice > span {
   display: grid;
   flex: 0 0 auto;
@@ -743,6 +777,29 @@
   aspect-ratio: 1.25 / 1;
   background: var(--wizard-sand);
   object-fit: cover;
+}
+
+.mediaDocument {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1.25 / 1;
+  place-items: center;
+  place-content: center;
+  gap: 7px;
+  background:
+    linear-gradient(135deg, rgba(18, 61, 49, 0.08), transparent),
+    var(--wizard-sand);
+  color: var(--wizard-green);
+  text-align: center;
+}
+
+.mediaDocument > span {
+  font-size: 28px;
+}
+
+.mediaDocument > small {
+  font-size: 9px;
+  font-weight: 800;
 }
 
 .mediaOverlay {

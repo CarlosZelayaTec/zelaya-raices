@@ -4,6 +4,16 @@ import { getPanelContext } from "@/shared/lib/dashboard/panel-context";
 import { updateProfileAction } from "./actions";
 import accountStyles from "./profile.module.css";
 
+const profileErrorMessages: Record<string, string> = {
+  "contacto-requerido": "Completa un correo, teléfono y WhatsApp válidos para mantener tu anuncio publicado.",
+  "correo-invalido": "Ingresa un correo de contacto válido.",
+  "descripcion-invalida": "La presentación profesional supera el límite permitido.",
+  error: "No pudimos guardar los cambios. Inténtalo nuevamente.",
+  "nombre-invalido": "El nombre público debe tener entre 2 y 120 caracteres.",
+  "telefono-invalido": "Ingresa un teléfono válido, por ejemplo +504 9876-5432.",
+  "whatsapp-invalido": "Ingresa un número de WhatsApp válido, por ejemplo +504 9876-5432.",
+};
+
 export default async function AccountPage({
   searchParams,
 }: {
@@ -45,9 +55,9 @@ export default async function AccountPage({
           <p className={accountStyles.success} role="status">
             Perfil actualizado correctamente.
           </p>
-        ) : estado ? (
+        ) : estado && profileErrorMessages[estado] ? (
           <p className={accountStyles.error} role="alert">
-            No pudimos guardar los cambios. Revisa la información.
+            {profileErrorMessages[estado]}
           </p>
         ) : null}
 
@@ -63,6 +73,16 @@ export default async function AccountPage({
             />
           </label>
           <div className={accountStyles.twoColumns}>
+            <label>
+              <span>Correo de contacto</span>
+              <input
+                defaultValue={context.profile?.public_email ?? ""}
+                inputMode="email"
+                name="public_email"
+                placeholder="tu@correo.com"
+                type="email"
+              />
+            </label>
             <label>
               <span>Teléfono</span>
               <input
@@ -82,6 +102,12 @@ export default async function AccountPage({
               />
             </label>
           </div>
+          <p className={accountStyles.contactHint}>
+            Estos datos se mostrarán únicamente en tus propiedades. Correo,
+            teléfono y WhatsApp son obligatorios al enviar un anuncio a
+            revisión. Indica por separado el número que realmente atiende
+            WhatsApp.
+          </p>
           <label>
             <span>Presentación profesional</span>
             <textarea
@@ -103,4 +129,3 @@ export default async function AccountPage({
     </>
   );
 }
-
