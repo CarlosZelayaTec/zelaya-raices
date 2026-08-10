@@ -33,6 +33,18 @@ test("renders the Zelaya Raíces public homepage", async () => {
 
   const html = await response.text();
   assert.match(html, /lang="es-HN"/i);
+  const headEnd = html.indexOf("</head>");
+  const bodyStart = html.indexOf("<body");
+  const bodyOpeningEnd = html.indexOf(">", bodyStart);
+  const gtmScript = html.indexOf(
+    "googletagmanager.com/gtm.js?id='+i+dl",
+  );
+  const gtmNoScript = html.indexOf(
+    '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K77TWH4Z"',
+  );
+  assert.ok(gtmScript > 0 && gtmScript < headEnd);
+  assert.ok(gtmNoScript > bodyOpeningEnd);
+  assert.match(html.slice(bodyOpeningEnd + 1, gtmNoScript), /^\s*$/);
   assert.match(html, /Zelaya Raíces/);
   assert.match(html, /Bienvenidos a Zelaya Raíces/);
   assert.match(html, /Tu próximo hogar comienza con confianza/);
