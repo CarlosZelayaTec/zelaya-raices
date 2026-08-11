@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getPropertyTypeLabel } from "@/modules/properties/property-types";
 import styles from "@/shared/components/dashboard-content.module.css";
 import {
   availabilityStatusLabels,
@@ -142,13 +143,7 @@ export default async function PanelPropertiesPage({
                     <td>
                       <strong>{listing.title}</strong>
                       <small>
-                        {listing.property_type === "land"
-                          ? "Terreno"
-                          : listing.property_type === "house"
-                            ? "Casa"
-                            : listing.property_type === "apartment"
-                              ? "Apartamento"
-                              : "Propiedad"}
+                        {getPropertyTypeLabel(listing.property_type)}
                         {" · "}
                         {listing.operation_type === "sale"
                           ? "Venta"

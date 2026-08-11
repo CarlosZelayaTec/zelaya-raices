@@ -1792,6 +1792,7 @@ export type Database = {
         | "apartment"
         | "condominium"
         | "land"
+        | "villa"
         | "commercial"
         | "office"
         | "warehouse"
@@ -2015,6 +2016,7 @@ export const Constants = {
         "apartment",
         "condominium",
         "land",
+        "villa",
         "commercial",
         "office",
         "warehouse",

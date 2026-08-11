@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PropertyCard } from "../../modules/properties/components/property-card";
+import { PROPERTY_TYPE_OPTIONS } from "../../modules/properties/property-types";
 import { getPublicProperties } from "../../modules/properties/public-data.server";
 import { SiteFooter } from "../../shared/components/site-footer";
 import { SiteHeader } from "../../shared/components/site-header";
@@ -14,18 +15,9 @@ type PropertiesPageProps = {
 export const dynamic = "force-dynamic";
 
 const operationValues = new Set(["venta", "alquiler"]);
-const propertyTypeValues = new Set([
-  "apartamento",
-  "casa",
-  "terreno",
-  "villa",
-  "bodega",
-  "condominio",
-  "edificio",
-  "finca",
-  "local comercial",
-  "oficina",
-]);
+const propertyTypeValues = new Set(
+  PROPERTY_TYPE_OPTIONS.map(({ filterValue }) => filterValue),
+);
 const orderValues = new Set(["recientes", "precio-asc", "precio-desc"]);
 const priceValues = new Set([
   15000, 30000, 60000, 100000, 3000000, 5000000, 6000000, 10000000,
@@ -242,16 +234,11 @@ export default async function PropertiesPage({
                 <span>Tipo</span>
                 <select name="tipo" defaultValue={filters.propertyType}>
                   <option value="">Toda propiedad</option>
-                  <option value="casa">Casa</option>
-                  <option value="apartamento">Apartamento</option>
-                  <option value="terreno">Terreno</option>
-                   <option value="villa">Villa</option>
-                   <option value="condominio">Condominio</option>
-                   <option value="local comercial">Local comercial</option>
-                   <option value="oficina">Oficina</option>
-                   <option value="bodega">Bodega</option>
-                   <option value="finca">Finca</option>
-                   <option value="edificio">Edificio</option>
+                  {PROPERTY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.filterValue}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>

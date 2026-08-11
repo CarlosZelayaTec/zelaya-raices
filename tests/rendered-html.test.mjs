@@ -4,6 +4,18 @@ import test from "node:test";
 const REAL_LISTING_TITLE = /Terreno en venta - Residencial Villas del pinar/i;
 const REAL_LISTING_PATH =
   "/propiedades/terreno-en-venta-residencial-villas-del-pinar-eb7b1ce3";
+const PROPERTY_TYPE_FILTER_VALUES = [
+  "casa",
+  "apartamento",
+  "terreno",
+  "villa",
+  "condominio",
+  "local comercial",
+  "oficina",
+  "bodega",
+  "finca",
+  "edificio",
+];
 
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -52,6 +64,9 @@ test("renders the Zelaya Raíces public homepage", async () => {
   assert.match(html, /brand--lockup brand--light/);
   assert.match(html, /zelaya-favicon\.png/);
   assert.match(html, /name="precioMax"/);
+  for (const propertyType of PROPERTY_TYPE_FILTER_VALUES) {
+    assert.match(html, new RegExp(`value="${propertyType}"`));
+  }
   assert.match(html, /href="\/propiedades\?operacion=venta"/);
   assert.match(html, /href="\/propiedades\?operacion=alquiler"/);
   assert.match(html, /Historias de clientes Zelaya Raíces/);
@@ -60,6 +75,9 @@ test("renders the Zelaya Raíces public homepage", async () => {
   assert.match(html, /viewBox="0 0 24 24"/);
   assert.match(html, /href="\/propiedades"/);
   assert.match(html, REAL_LISTING_TITLE);
+  for (const propertyType of PROPERTY_TYPE_FILTER_VALUES) {
+    assert.match(html, new RegExp(`value="${propertyType}"`));
+  }
   assert.doesNotMatch(html, /propiedades de demostración/i);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
 });

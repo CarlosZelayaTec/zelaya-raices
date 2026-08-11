@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { PROPERTY_TYPE_OPTIONS } from "@/modules/properties/property-types";
+
 const priceOptions = {
   venta: [
     { value: "3000000", label: "L 3 millones" },
@@ -58,10 +60,11 @@ export function HeroSearch() {
           <span>Tipo</span>
           <select name="tipo" defaultValue="">
             <option value="">Toda propiedad</option>
-            <option value="casa">Casa</option>
-            <option value="apartamento">Apartamento</option>
-            <option value="terreno">Terreno</option>
-            <option value="villa">Villa</option>
+            {PROPERTY_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.filterValue}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
         <label className="search-field">

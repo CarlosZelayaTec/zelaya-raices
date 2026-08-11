@@ -5,6 +5,10 @@ import { getPublicSupabaseConfig } from "@/shared/lib/supabase/config";
 import type { Database } from "@/shared/lib/supabase/database.types";
 
 import { getPropertyBySlug, properties as demoProperties } from "./data";
+import {
+  getPropertyTypeLabel,
+  isLandPropertyType,
+} from "./property-types";
 import type {
   Property,
   PropertyMapLocation,
@@ -136,18 +140,6 @@ const PUBLIC_LISTING_FIELDS = `
   )
 `;
 
-const propertyTypeLabels: Record<ListingRow["property_type"], string> = {
-  apartment: "Apartamento",
-  building: "Edificio",
-  commercial: "Local comercial",
-  condominium: "Condominio",
-  farm: "Finca",
-  house: "Casa",
-  land: "Terreno",
-  office: "Oficina",
-  warehouse: "Bodega",
-};
-
 function createPublicCatalogClient() {
   const { publishableKey, url } = getPublicSupabaseConfig();
 
@@ -223,7 +215,7 @@ function mapListing(
   // partially processed row from creating a broken card if storage lags.
   if (!primaryImage) return null;
 
-  const isLand = listing.property_type === "land";
+  const isLand = isLandPropertyType(listing.property_type);
   const area = isLand
     ? listing.land_area
     : (listing.construction_area ?? listing.land_area);
@@ -269,7 +261,8 @@ function mapListing(
         ? listing.price_period
         : undefined,
     priceUpdatedAt: formatPublicDate(listing.last_price_update_at),
-    propertyType: propertyTypeLabels[listing.property_type],
+    propertyType: getPropertyTypeLabel(listing.property_type),
+    propertyTypeValue: listing.property_type,
     publishedAt: listing.published_at ?? undefined,
     publishedChanges: null,
     reportCount: listing.reports_count,

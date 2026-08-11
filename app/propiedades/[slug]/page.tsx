@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PropertyLocationMap } from "../../../modules/properties/components/property-location-map";
+import { isLandPropertyType } from "../../../modules/properties/property-types";
 import { getPublicPropertyBySlug } from "../../../modules/properties/public-data.server";
 import type { Property, PropertyMedia } from "../../../modules/properties/types";
 import { formatCurrency } from "../../../shared/lib/formatters";
@@ -102,9 +103,34 @@ function serializeJsonLd(value: unknown) {
 }
 
 function propertySchemaType(property: Property) {
-  if (property.propertyType === "Casa") return "SingleFamilyResidence";
-  if (property.propertyType === "Apartamento") return "Apartment";
-  if (property.propertyType === "Terreno") return "Landform";
+  if (property.propertyTypeValue) {
+    if (
+      property.propertyTypeValue === "house" ||
+      property.propertyTypeValue === "villa"
+    ) {
+      return "SingleFamilyResidence";
+    }
+    if (
+      property.propertyTypeValue === "apartment" ||
+      property.propertyTypeValue === "condominium"
+    ) {
+      return "Apartment";
+    }
+    if (isLandPropertyType(property.propertyTypeValue)) return "Landform";
+  }
+
+  if (property.propertyType === "Casa" || property.propertyType === "Villa") {
+    return "SingleFamilyResidence";
+  }
+  if (
+    property.propertyType === "Apartamento" ||
+    property.propertyType === "Condominio"
+  ) {
+    return "Apartment";
+  }
+  if (property.propertyType === "Terreno" || property.propertyType === "Finca") {
+    return "Landform";
+  }
   return "Place";
 }
 

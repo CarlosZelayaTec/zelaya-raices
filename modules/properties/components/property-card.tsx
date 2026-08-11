@@ -1,5 +1,9 @@
 import Link from "next/link";
 import type { Property } from "../types";
+import {
+  isLandPropertyType,
+  isResidentialPropertyType,
+} from "../property-types";
 import { formatCurrency } from "../../../shared/lib/formatters";
 
 type PropertyCardProps = {
@@ -38,6 +42,15 @@ function propertyPrice(property: Property) {
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
+  const isLand = property.propertyTypeValue
+    ? isLandPropertyType(property.propertyTypeValue)
+    : property.propertyType === "Terreno" || property.propertyType === "Finca";
+  const isResidential = property.propertyTypeValue
+    ? isResidentialPropertyType(property.propertyTypeValue)
+    : ["Casa", "Apartamento", "Villa", "Condominio"].includes(
+        property.propertyType,
+      );
+
   const firstMedia = property.media?.[0];
 
   return (
@@ -82,12 +95,12 @@ export function PropertyCard({ property }: PropertyCardProps) {
           {propertyPrice(property)}
         </p>
         <dl className="property-facts" aria-label="Características principales">
-          {property.propertyType === "Terreno" ? (
+          {isLand ? (
             <div>
               <dt>Tipo</dt>
-              <dd>Terreno</dd>
+              <dd>{property.propertyType}</dd>
             </div>
-          ) : (
+          ) : isResidential ? (
             <>
               <div>
                 <dt>Habitaciones</dt>
@@ -96,6 +109,21 @@ export function PropertyCard({ property }: PropertyCardProps) {
                     ? "Por confirmar"
                     : `${property.bedrooms} hab.`}
                 </dd>
+              </div>
+              <div>
+                <dt>Baños</dt>
+                <dd>
+                  {property.bathrooms === null
+                    ? "Por confirmar"
+                    : `${property.bathrooms} baños`}
+                </dd>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <dt>Tipo</dt>
+                <dd>{property.propertyType}</dd>
               </div>
               <div>
                 <dt>Baños</dt>
@@ -117,7 +145,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
                 : "Por confirmar"}
             </dd>
           </div>
-          {property.propertyType === "Terreno" ? (
+          {isLand ? (
             <div>
               <dt>Operación</dt>
               <dd>{property.operation}</dd>

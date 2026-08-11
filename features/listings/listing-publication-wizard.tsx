@@ -12,6 +12,13 @@ import {
   useState,
 } from "react";
 
+import {
+  getPropertyTypeOption,
+  isLandPropertyType,
+  isResidentialPropertyType,
+  PROPERTY_TYPE_OPTIONS,
+  type PropertyType,
+} from "@/modules/properties/property-types";
 import { createSupabaseBrowserClient } from "@/shared/lib/supabase/client";
 import type { Database } from "@/shared/lib/supabase/database.types";
 
@@ -26,7 +33,6 @@ type ListingUpdate =
   Database["public"]["Tables"]["listings"]["Update"];
 type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
 type MediaRow = Database["public"]["Tables"]["listing_media"]["Row"];
-type PropertyType = Database["public"]["Enums"]["property_type"];
 type OperationType = Database["public"]["Enums"]["operation_type"];
 type AreaUnit = Database["public"]["Enums"]["area_unit"];
 type CurrencyCode = Database["public"]["Enums"]["currency_code"];
@@ -134,68 +140,6 @@ const STEPS = [
   },
 ] as const;
 
-const PROPERTY_OPTIONS: ReadonlyArray<{
-  value: PropertyType;
-  label: string;
-  description: string;
-  icon: string;
-}> = [
-  {
-    value: "land",
-    label: "Terreno",
-    description: "Lotes, solares y terrenos para desarrollo.",
-    icon: "▱",
-  },
-  {
-    value: "house",
-    label: "Casa",
-    description: "Viviendas independientes y residencias.",
-    icon: "⌂",
-  },
-  {
-    value: "apartment",
-    label: "Apartamento",
-    description: "Apartamentos y unidades en edificios.",
-    icon: "▥",
-  },
-  {
-    value: "condominium",
-    label: "Condominio",
-    description: "Unidades residenciales en condominio.",
-    icon: "⌂",
-  },
-  {
-    value: "commercial",
-    label: "Local comercial",
-    description: "Espacios para comercio o servicios.",
-    icon: "▣",
-  },
-  {
-    value: "office",
-    label: "Oficina",
-    description: "Oficinas y espacios profesionales.",
-    icon: "▤",
-  },
-  {
-    value: "warehouse",
-    label: "Bodega",
-    description: "Bodegas y espacios logísticos.",
-    icon: "▰",
-  },
-  {
-    value: "farm",
-    label: "Finca",
-    description: "Fincas, parcelas y uso rural.",
-    icon: "♧",
-  },
-  {
-    value: "building",
-    label: "Edificio",
-    description: "Edificios completos e inmuebles mixtos.",
-    icon: "▥",
-  },
-];
-
 const OPERATION_OPTIONS: ReadonlyArray<{
   value: OperationType;
   label: string;
@@ -271,7 +215,7 @@ function valueToInput(value: number | null) {
 }
 
 function isLandListing(propertyType: PropertyType) {
-  return propertyType === "land" || propertyType === "farm";
+  return isLandPropertyType(propertyType);
 }
 
 function isEditablePublicationStatus(
@@ -616,6 +560,11 @@ export function ListingPublicationWizard({
         constructionArea: "",
         yearBuilt: "",
       }));
+    } else if (!isResidentialPropertyType(value)) {
+      setForm((current) => ({
+        ...current,
+        bedrooms: "",
+      }));
     }
   }
 
@@ -691,7 +640,11 @@ export function ListingPublicationWizard({
         nextErrors.constructionArea = "El área debe ser mayor que cero.";
       }
 
-      if (bedrooms !== null && (!Number.isInteger(bedrooms) || bedrooms < 0)) {
+      if (
+        isResidentialPropertyType(form.propertyType) &&
+        bedrooms !== null &&
+        (!Number.isInteger(bedrooms) || bedrooms < 0)
+      ) {
         nextErrors.bedrooms = "Usa un número entero igual o mayor que cero.";
       }
 
@@ -806,6 +759,7 @@ export function ListingPublicationWizard({
 
   function buildCreateListingArgs(slug: string) {
     const isLand = isLandListing(form.propertyType);
+    const isResidential = isResidentialPropertyType(form.propertyType);
     const priceAmount = form.priceOnRequest
       ? null
       : toNullableNumber(form.priceAmount);
@@ -826,7 +780,7 @@ export function ListingPublicationWizard({
       p_currency_code: form.currencyCode,
       p_price_period:
         form.operationType === "sale" ? "total" : form.pricePeriod,
-      p_bedrooms: isLand ? null : toNullableNumber(form.bedrooms),
+      p_bedrooms: isResidential ? toNullableNumber(form.bedrooms) : null,
       p_bathrooms: isLand ? null : toNullableNumber(form.bathrooms),
       p_parking_spaces: isLand
         ? null
@@ -842,6 +796,7 @@ export function ListingPublicationWizard({
 
   function buildListingUpdate(): ListingUpdate {
     const isLand = isLandListing(form.propertyType);
+    const isResidential = isResidentialPropertyType(form.propertyType);
     const landArea = toNullableNumber(form.landArea);
     const constructionArea = isLand
       ? null
@@ -861,7 +816,7 @@ export function ListingPublicationWizard({
       currency_code: form.currencyCode,
       price_period:
         form.operationType === "sale" ? "total" : form.pricePeriod,
-      bedrooms: isLand ? null : toNullableNumber(form.bedrooms),
+      bedrooms: isResidential ? toNullableNumber(form.bedrooms) : null,
       bathrooms: isLand ? null : toNullableNumber(form.bathrooms),
       parking_spaces: isLand
         ? null
@@ -877,6 +832,7 @@ export function ListingPublicationWizard({
 
   function buildPublishedRevisionArgs(currentDraft: DraftReference) {
     const isLand = isLandListing(form.propertyType);
+    const isResidential = isResidentialPropertyType(form.propertyType);
     const landArea = toNullableNumber(form.landArea);
     const constructionArea = isLand
       ? null
@@ -904,7 +860,7 @@ export function ListingPublicationWizard({
       p_currency_code: form.currencyCode,
       p_price_period:
         form.operationType === "sale" ? "total" : form.pricePeriod,
-      p_bedrooms: isLand ? null : toNullableNumber(form.bedrooms),
+      p_bedrooms: isResidential ? toNullableNumber(form.bedrooms) : null,
       p_bathrooms: isLand ? null : toNullableNumber(form.bathrooms),
       p_parking_spaces: isLand
         ? null
@@ -1632,7 +1588,7 @@ export function ListingPublicationWizard({
           <fieldset className={styles.choiceGroup}>
             <legend>Tipo de propiedad</legend>
             <div className={styles.propertyChoices}>
-              {PROPERTY_OPTIONS.map((option) => (
+              {PROPERTY_TYPE_OPTIONS.map((option) => (
                 <label
                   className={classNames(
                     styles.choiceCard,
@@ -1693,6 +1649,8 @@ export function ListingPublicationWizard({
 
     if (step === 1) {
       const isLand = isLandListing(form.propertyType);
+      const isResidential = isResidentialPropertyType(form.propertyType);
+      const selectedPropertyType = getPropertyTypeOption(form.propertyType);
 
       return (
         <div className={styles.stepBody}>
@@ -1713,11 +1671,7 @@ export function ListingPublicationWizard({
               onChange={(event) =>
                 updateField("title", event.currentTarget.value)
               }
-              placeholder={
-                isLand
-                  ? "Terreno residencial de 850 m² en zona tranquila"
-                  : "Casa familiar de 3 habitaciones cerca del centro"
-              }
+              placeholder={selectedPropertyType?.titlePlaceholder}
               value={form.title}
             />
             <span className={styles.fieldHint} id={`${fieldId("title")}-hint`}>
@@ -1863,18 +1817,24 @@ export function ListingPublicationWizard({
 
           {!isLand ? (
             <fieldset className={styles.subsection}>
-              <legend>Características</legend>
+              <legend>
+                {isResidential
+                  ? "Características residenciales"
+                  : "Características comerciales"}
+              </legend>
               <div className={styles.formGridThree}>
-                <NumberField
-                  disabled={fieldsLocked}
-                  error={errors.bedrooms}
-                  id={fieldId("bedrooms")}
-                  label="Habitaciones"
-                  min="0"
-                  onChange={(value) => updateField("bedrooms", value)}
-                  step="1"
-                  value={form.bedrooms}
-                />
+                {isResidential ? (
+                  <NumberField
+                    disabled={fieldsLocked}
+                    error={errors.bedrooms}
+                    id={fieldId("bedrooms")}
+                    label="Habitaciones"
+                    min="0"
+                    onChange={(value) => updateField("bedrooms", value)}
+                    step="1"
+                    value={form.bedrooms}
+                  />
+                ) : null}
                 <NumberField
                   disabled={fieldsLocked}
                   error={errors.bathrooms}
@@ -1900,7 +1860,7 @@ export function ListingPublicationWizard({
           ) : null}
 
           <fieldset className={styles.subsection}>
-            <legend>Áreas</legend>
+            <legend>{isLand ? "Dimensiones del terreno" : "Áreas"}</legend>
             <div className={styles.formGridTwo}>
               <AreaField
                 disabled={fieldsLocked}
@@ -1917,7 +1877,11 @@ export function ListingPublicationWizard({
                   disabled={fieldsLocked}
                   error={errors.constructionArea}
                   id={fieldId("constructionArea")}
-                  label="Área de construcción *"
+                  label={
+                    isResidential
+                      ? "Área de construcción *"
+                      : "Área construida o útil *"
+                  }
                   onUnitChange={(value) =>
                     updateField("constructionAreaUnit", value)
                   }
@@ -2310,7 +2274,7 @@ export function ListingPublicationWizard({
               <dt>Tipo</dt>
               <dd>
                 {
-                  PROPERTY_OPTIONS.find(
+                  PROPERTY_TYPE_OPTIONS.find(
                     ({ value }) => value === form.propertyType,
                   )?.label
                 }

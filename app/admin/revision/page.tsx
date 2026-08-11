@@ -1,3 +1,4 @@
+import { getPropertyTypeInitials } from "@/modules/properties/property-types";
 import styles from "@/shared/components/dashboard-content.module.css";
 import { requireStaffContext } from "@/shared/lib/auth";
 import { formatHNL } from "@/shared/lib/formatters";
@@ -83,11 +84,7 @@ export default async function ReviewQueuePage({
                 <div className={reviewStyles.summary}>
                   <div className={reviewStyles.propertyMark}>
                     <span>
-                      {listing.property_type === "land"
-                        ? "TE"
-                        : listing.property_type === "house"
-                          ? "CA"
-                          : "AP"}
+                      {getPropertyTypeInitials(listing.property_type)}
                     </span>
                     <small>{images.length} fotos</small>
                   </div>
@@ -246,4 +243,3 @@ export default async function ReviewQueuePage({
     </>
   );
 }
-

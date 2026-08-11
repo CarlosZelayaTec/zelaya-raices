@@ -1,3 +1,5 @@
+import type { Database } from "@/shared/lib/supabase/database.types";
+
 export type PropertyStatus =
   | "draft"
   | "submitted"
@@ -56,6 +58,7 @@ export type Property = {
   address: string;
   operation: "Venta" | "Alquiler";
   propertyType: string;
+  propertyTypeValue?: Database["public"]["Enums"]["property_type"];
   price: number | null;
   priceOnRequest?: boolean;
   currencyCode?: PropertyCurrency;
