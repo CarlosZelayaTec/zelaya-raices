@@ -1,13 +1,8 @@
 "use client";
 
-import "mapbox-gl/dist/mapbox-gl.css";
+import "leaflet/dist/leaflet.css";
 
-import {
-  type FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 import styles from "./location-map-picker.module.css";
 
@@ -44,9 +39,9 @@ type GeocodingFeature = {
   };
 };
 
-type MapboxInstance = import("mapbox-gl").Map;
-type MapboxMarker = import("mapbox-gl").Marker;
-type MapboxLibrary = typeof import("mapbox-gl").default;
+type LeafletInstance = import("leaflet").Map;
+type LeafletLibrary = typeof import("leaflet");
+type LeafletMarker = import("leaflet").CircleMarker;
 
 const HONDURAS_CENTER: [number, number] = [-86.5, 14.8];
 const HONDURAS_BOUNDS: [[number, number], [number, number]] = [
@@ -55,25 +50,18 @@ const HONDURAS_BOUNDS: [[number, number], [number, number]] = [
 ];
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN?.trim() ?? "";
 
-const OPEN_STREET_MAP_STYLE: import("mapbox-gl").StyleSpecification = {
-  version: 8,
-  sources: {
-    openStreetMap: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    },
-  },
-  layers: [
-    {
-      id: "openStreetMap",
-      type: "raster",
-      source: "openStreetMap",
-    },
-  ],
-};
+const MAPBOX_TILE_URL =
+  "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x";
+const OPEN_STREET_MAP_TILE_URL =
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const MARKER_STYLE = {
+  color: "#fffef9",
+  fillColor: "#b86645",
+  fillOpacity: 1,
+  opacity: 1,
+  radius: 10,
+  weight: 3,
+} as const;
 
 function parseCoordinate(value: string, minimum: number, maximum: number) {
   const coordinate = Number(value);
@@ -107,9 +95,10 @@ export function LocationMapPicker({
   onLocationDetailsChange,
 }: LocationMapPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapboxInstance | null>(null);
-  const markerRef = useRef<MapboxMarker | null>(null);
-  const mapboxRef = useRef<MapboxLibrary | null>(null);
+  const mapRef = useRef<LeafletInstance | null>(null);
+  const markerRef = useRef<LeafletMarker | null>(null);
+  const leafletRef = useRef<LeafletLibrary | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const disabledRef = useRef(disabled);
   const coordinatesCallbackRef = useRef(onCoordinatesChange);
 
@@ -134,63 +123,95 @@ export function LocationMapPicker({
     async function initializeMap() {
       if (!containerRef.current || mapRef.current) return;
 
-      const imported = await import("mapbox-gl");
+      const leaflet = await import("leaflet");
       if (cancelled || !containerRef.current) return;
 
-      const mapboxgl = imported.default;
-      mapboxRef.current = mapboxgl;
-
-      if (MAPBOX_TOKEN) mapboxgl.accessToken = MAPBOX_TOKEN;
+      leafletRef.current = leaflet;
 
       const initialLatitude = parseCoordinate(latitude, -90, 90);
       const initialLongitude = parseCoordinate(longitude, -180, 180);
       const hasInitialPoint =
         initialLatitude !== null && initialLongitude !== null;
       const center: [number, number] = hasInitialPoint
-        ? [initialLongitude, initialLatitude]
-        : HONDURAS_CENTER;
+        ? [initialLatitude, initialLongitude]
+        : [HONDURAS_CENTER[1], HONDURAS_CENTER[0]];
 
-      const map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: MAPBOX_TOKEN
-          ? "mapbox://styles/mapbox/streets-v12"
-          : OPEN_STREET_MAP_STYLE,
+      const map = leaflet.map(containerRef.current, {
         center,
-        maxBounds: HONDURAS_BOUNDS,
-        renderWorldCopies: false,
-        zoom: hasInitialPoint ? 14 : 6.2,
+        dragging: !disabledRef.current,
+        maxBounds: leaflet.latLngBounds(
+          [HONDURAS_BOUNDS[0][1], HONDURAS_BOUNDS[0][0]],
+          [HONDURAS_BOUNDS[1][1], HONDURAS_BOUNDS[1][0]],
+        ),
+        maxBoundsViscosity: 1,
+        scrollWheelZoom: true,
+        touchZoom: true,
+        zoom: hasInitialPoint ? 14 : 6,
+        zoomControl: true,
       });
+      mapRef.current = map;
 
-      map.addControl(
-        new mapboxgl.NavigationControl({ showCompass: false }),
-        "top-right",
-      );
+      const tileLayer = MAPBOX_TOKEN
+        ? leaflet.tileLayer(
+            `${MAPBOX_TILE_URL}?access_token=${encodeURIComponent(MAPBOX_TOKEN)}`,
+            {
+              attribution:
+                '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+              maxZoom: 22,
+              tileSize: 512,
+              zoomOffset: -1,
+            },
+          )
+        : leaflet.tileLayer(OPEN_STREET_MAP_TILE_URL, {
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19,
+          });
+
+      let failedTiles = 0;
+      tileLayer.on("tileerror", () => {
+        failedTiles += 1;
+        if (failedTiles >= 3 && !cancelled) {
+          setMapError(
+            "No pudimos descargar el mapa. La bÃºsqueda y las coordenadas manuales siguen disponibles.",
+          );
+        }
+      });
+      tileLayer.addTo(map);
 
       if (hasInitialPoint) {
-        markerRef.current = new mapboxgl.Marker({ color: "#b86645" })
-          .setLngLat(center)
-          .addTo(map);
+        markerRef.current = leaflet.circleMarker(center, MARKER_STYLE).addTo(map);
       }
 
-      map.on("click", ({ lngLat }) => {
+      map.on("click", ({ latlng }) => {
         if (disabledRef.current) return;
 
         if (!markerRef.current) {
-          markerRef.current = new mapboxgl.Marker({ color: "#b86645" })
-            .setLngLat(lngLat)
+          markerRef.current = leaflet
+            .circleMarker(latlng, MARKER_STYLE)
             .addTo(map);
         } else {
-          markerRef.current.setLngLat(lngLat);
+          markerRef.current.setLatLng(latlng);
         }
 
         coordinatesCallbackRef.current(
-          lngLat.lat.toFixed(6),
-          lngLat.lng.toFixed(6),
+          latlng.lat.toFixed(6),
+          latlng.lng.toFixed(6),
         );
       });
 
-      map.on("load", () => setIsMapReady(true));
-      mapRef.current = map;
+      const resizeMap = () => map.invalidateSize({ animate: false });
+      if (typeof ResizeObserver === "function") {
+        resizeObserverRef.current = new ResizeObserver(resizeMap);
+        resizeObserverRef.current.observe(containerRef.current);
+      }
+
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+
+        resizeMap();
+        setIsMapReady(true);
+      });
     }
 
     void initializeMap().catch(() => {
@@ -203,11 +224,13 @@ export function LocationMapPicker({
 
     return () => {
       cancelled = true;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       markerRef.current?.remove();
       markerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
-      mapboxRef.current = null;
+      leafletRef.current = null;
     };
     // Coordinate and disabled changes are synchronized through refs/effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,26 +238,25 @@ export function LocationMapPicker({
 
   useEffect(() => {
     const map = mapRef.current;
-    const mapboxgl = mapboxRef.current;
+    const leaflet = leafletRef.current;
     const nextLatitude = parseCoordinate(latitude, -90, 90);
     const nextLongitude = parseCoordinate(longitude, -180, 180);
 
-    if (!map || !mapboxgl || nextLatitude === null || nextLongitude === null) {
+    if (!map || !leaflet || nextLatitude === null || nextLongitude === null) {
       return;
     }
 
-    const point: [number, number] = [nextLongitude, nextLatitude];
+    const point: [number, number] = [nextLatitude, nextLongitude];
     if (!markerRef.current) {
-      markerRef.current = new mapboxgl.Marker({ color: "#b86645" })
-        .setLngLat(point)
+      markerRef.current = leaflet
+        .circleMarker(point, MARKER_STYLE)
         .addTo(map);
     } else {
-      markerRef.current.setLngLat(point);
+      markerRef.current.setLatLng(point);
     }
   }, [latitude, longitude]);
 
-  async function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSearch() {
     const normalizedQuery = query.trim();
 
     if (!MAPBOX_TOKEN) {
@@ -313,10 +335,8 @@ export function LocationMapPicker({
       zone: context?.neighborhood?.name ?? context?.locality?.name,
     });
 
-    mapRef.current?.flyTo({
-      center: [nextLongitude, nextLatitude],
-      zoom: 15,
-      essential: false,
+    mapRef.current?.flyTo([nextLatitude, nextLongitude], 15, {
+      animate: false,
     });
     setQuery(featureLabel(feature));
     setResults([]);
@@ -336,7 +356,7 @@ export function LocationMapPicker({
         <span>{MAPBOX_TOKEN ? "Mapbox" : "Mapa interactivo"}</span>
       </div>
 
-      <form className={styles.search} onSubmit={handleSearch}>
+      <div className={styles.search} role="search">
         <label htmlFor="location-map-search">Buscar en Honduras</label>
         <div>
           <input
@@ -347,15 +367,26 @@ export function LocationMapPicker({
               setQuery(event.currentTarget.value);
               setSearchError("");
             }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+
+              event.preventDefault();
+              event.stopPropagation();
+              void handleSearch();
+            }}
             placeholder="Ej. Villas del Pinar, Tegucigalpa"
             type="search"
             value={query}
           />
-          <button disabled={disabled || isSearching} type="submit">
+          <button
+            disabled={disabled || isSearching}
+            onClick={() => void handleSearch()}
+            type="button"
+          >
             {isSearching ? "Buscando…" : "Buscar"}
           </button>
         </div>
-      </form>
+      </div>
 
       {searchError ? (
         <p className={styles.message} role="status">

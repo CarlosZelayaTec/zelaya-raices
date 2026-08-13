@@ -99,11 +99,20 @@
   border-radius: 15px;
   background: #e7ece7;
 }
-.map { position: absolute; inset: 0; }
+.map {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: #e7ece7;
+  font-family: inherit;
+}
+.map :global(.leaflet-control-attribution) {
+  font-size: 9px;
+}
 .loading {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 1000;
   display: grid;
   place-items: center;
   background: #e7ece7;
@@ -118,7 +127,7 @@
   right: 12px;
   bottom: 12px;
   left: 12px;
-  z-index: 1;
+  z-index: 900;
   width: max-content;
   max-width: calc(100% - 24px);
   margin: 0 auto;

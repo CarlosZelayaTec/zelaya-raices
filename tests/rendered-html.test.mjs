@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const REAL_LISTING_TITLE = /Terreno en venta - Residencial Villas del pinar/i;
@@ -16,6 +17,22 @@ const PROPERTY_TYPE_FILTER_VALUES = [
   "finca",
   "edificio",
 ];
+
+test("keeps the location search from submitting the publication wizard", async () => {
+  const pickerSource = await readFile(
+    new URL("../features/listings/location-map-picker.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    pickerSource,
+    /<form[^>]+className=\{styles\.search\}/,
+  );
+  assert.match(pickerSource, /className=\{styles\.search\} role="search"/);
+  assert.match(pickerSource, /onClick=\{\(\) => void handleSearch\(\)\}/);
+  assert.match(pickerSource, /type="button"/);
+  assert.match(pickerSource, /import\("leaflet"\)/);
+});
 
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
