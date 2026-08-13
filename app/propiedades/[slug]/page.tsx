@@ -77,17 +77,6 @@ function contactPhoneDigits(value?: string) {
   return digits.length >= 8 ? digits : undefined;
 }
 
-function formatContactPhone(value?: string) {
-  const digits = contactPhoneDigits(value);
-  if (!digits) return undefined;
-
-  if (digits.startsWith("504") && digits.length === 11) {
-    return `+504 ${digits.slice(3, 7)} ${digits.slice(7)}`;
-  }
-
-  return value?.trim();
-}
-
 function getWhatsAppUrl(phone: string, propertyTitle: string) {
   const message = `Hola, me interesa la propiedad \"${propertyTitle}\" que vi en Zelaya Raíces.`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
@@ -196,11 +185,9 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const sellerName =
     seller?.name || property.advertiserName || "Anunciante de la propiedad";
   const whatsappPhone = contactPhoneDigits(seller?.whatsapp);
-  const phone = contactPhoneDigits(seller?.phone);
-  const visiblePhone = formatContactPhone(seller?.phone);
   const sellerEmail = seller?.email?.trim();
   const sellerVerified = seller?.verified ?? advertiserVerified;
-  const hasSellerContact = Boolean(whatsappPhone || phone || sellerEmail);
+  const hasSellerContact = Boolean(whatsappPhone || sellerEmail);
   const locationLabel = property.locationConfirmed
     ? "Confirmada"
     : property.locationPrecision === "exact"
@@ -425,11 +412,6 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                       Enviar correo
                     </a>
                   ) : null}
-                  {phone && visiblePhone ? (
-                    <a className="contact-card__phone" href={`tel:+${phone}`}>
-                      Llamar al {visiblePhone}
-                    </a>
-                  ) : null}
                 </div>
               ) : (
                 <p className="contact-card__unavailable">
@@ -461,7 +443,6 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               WhatsApp
             </a>
           ) : null}
-          {phone ? <a href={`tel:+${phone}`}>Llamar</a> : null}
           {sellerEmail ? (
             <a
               href={`mailto:${sellerEmail}?subject=${encodeURIComponent(`Consulta sobre ${property.title}`)}`}
