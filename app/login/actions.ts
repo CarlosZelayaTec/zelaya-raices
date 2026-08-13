@@ -21,7 +21,13 @@ import {
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server";
 
 export type AuthActionState = {
-  field?: "confirmPassword" | "email" | "fullName" | "password";
+  field?:
+    | "confirmPassword"
+    | "email"
+    | "fullName"
+    | "password"
+    | "publicPhone"
+    | "publicWhatsapp";
   message: string;
   status: "error" | "idle" | "success";
 };
@@ -31,6 +37,18 @@ function errorState(
   field?: AuthActionState["field"],
 ): AuthActionState {
   return { field, message, status: "error" };
+}
+
+function normalizeContactNumber(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (/^[2-9]\d{7}$/.test(digits)) return `+504${digits}`;
+  if (/^504[2-9]\d{7}$/.test(digits)) return `+${digits}`;
+  if (value.startsWith("+") && /^[1-9]\d{7,14}$/.test(digits)) {
+    return `+${digits}`;
+  }
+
+  return "";
 }
 
 export async function loginAction(
@@ -85,6 +103,12 @@ export async function signUpAction(
     readFormString(formData, "fullName", 120),
   );
   const email = normalizeEmail(readFormString(formData, "email", 254));
+  const publicPhone = normalizeContactNumber(
+    readFormString(formData, "publicPhone", 30),
+  );
+  const publicWhatsapp = normalizeContactNumber(
+    readFormString(formData, "publicWhatsapp", 30),
+  );
   const password = readFormValue(formData, "password", 128);
   const confirmPassword = readFormValue(
     formData,
@@ -102,6 +126,20 @@ export async function signUpAction(
   const emailError = validateEmail(email);
   if (emailError) return errorState(emailError, "email");
 
+  if (!publicPhone) {
+    return errorState(
+      "Escribe un teléfono válido, por ejemplo +504 9876-5432.",
+      "publicPhone",
+    );
+  }
+
+  if (!publicWhatsapp) {
+    return errorState(
+      "Escribe un número de WhatsApp válido, por ejemplo +504 9876-5432.",
+      "publicWhatsapp",
+    );
+  }
+
   const passwordError = validateNewPassword(password);
   if (passwordError) return errorState(passwordError, "password");
 
@@ -117,7 +155,11 @@ export async function signUpAction(
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          public_phone: publicPhone,
+          public_whatsapp: publicWhatsapp,
+        },
         emailRedirectTo: buildAuthCallbackUrl(origin, destination),
       },
     });

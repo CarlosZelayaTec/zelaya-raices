@@ -175,6 +175,7 @@ const ALLOWED_MEDIA_TYPES = new Map<string, string>([
 const MAX_MEDIA_ITEMS = 12;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_FILE_LABEL = "50 MB";
+const MAX_CONCURRENT_UPLOADS = 3;
 const HONDURAS_BOUNDS = {
   east: -82.5,
   north: 17.5,
@@ -418,6 +419,7 @@ function FieldError({
 
 export function ListingPublicationWizard({
   organizations,
+  sellerContact,
   initialOrganizationId,
   initialListing,
   className,
@@ -427,6 +429,7 @@ export function ListingPublicationWizard({
   const instanceId = useId().replaceAll(":", "");
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const successButtonRef = useRef<HTMLAnchorElement>(null);
   const previewUrlsRef = useRef(new Set<string>());
 
   const preferredOrganizationId =
@@ -447,6 +450,7 @@ export function ListingPublicationWizard({
   const [statusMessage, setStatusMessage] = useState("");
   const [globalError, setGlobalError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showSubmissionSuccess, setShowSubmissionSuccess] = useState(false);
   const [draft, setDraft] = useState<DraftReference | null>(() =>
     initialDraft(initialListing),
   );
@@ -479,6 +483,10 @@ export function ListingPublicationWizard({
   useEffect(() => {
     headingRef.current?.focus();
   }, [step]);
+
+  useEffect(() => {
+    if (showSubmissionSuccess) successButtonRef.current?.focus();
+  }, [showSubmissionSuccess]);
 
   useEffect(
     () => () => {
@@ -921,6 +929,25 @@ export function ListingPublicationWizard({
     return getRpcRows<T>(data, resultLabel);
   }
 
+  async function notifyReviewSubmission(listingId: string, version: number) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    const { data } = await supabase.auth.getSession();
+
+    if (!supabaseUrl || !publishableKey || !data.session?.access_token) return;
+
+    await fetch(`${supabaseUrl}/functions/v1/notify-listing-review`, {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${data.session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ listingId, version }),
+      keepalive: true,
+    });
+  }
+
   async function createDraft() {
     const slug = createDraftSlug(form.title);
     const insertedListing = await invokePublicRpc<ListingRow>(
@@ -1019,6 +1046,12 @@ export function ListingPublicationWizard({
     const registeredByLocalId = new Map<string, MediaRow>();
     if (pendingItems.length === 0) return registeredByLocalId;
 
+    const registeredItems: Array<{
+      item: MediaItem;
+      media: MediaRow;
+      file: File;
+    }> = [];
+
     for (const [index, item] of pendingItems.entries()) {
       const file = item.file;
       if (!file) continue;
@@ -1036,8 +1069,6 @@ export function ListingPublicationWizard({
         throw new Error(`El archivo “${file.name}” no es compatible.`);
       }
 
-      let registeredMedia: MediaRow | undefined;
-
       try {
         setStatusMessage(
           `Registrando archivo ${index + 1} de ${pendingItems.length}…`,
@@ -1047,7 +1078,7 @@ export function ListingPublicationWizard({
           error: undefined,
         });
 
-        registeredMedia = await invokePublicRpc<MediaRow>(
+        const registeredMedia = await invokePublicRpc<MediaRow>(
           "register_listing_media",
           {
             p_listing_id: listingId,
@@ -1067,38 +1098,81 @@ export function ListingPublicationWizard({
           isPrimary: registeredMedia.is_primary,
           error: undefined,
         });
+        registeredByLocalId.set(item.localId, registeredMedia);
+        registeredItems.push({ item, media: registeredMedia, file });
+      } catch {
+        setMediaStatus(item.localId, {
+          status: "error",
+          error: "No se pudo preparar.",
+          sourcePath: item.sourcePath,
+          recordId: item.recordId,
+          isPrimary: item.isPrimary,
+        });
+        throw new Error(`No se pudo preparar “${file.name}”.`);
+      }
+    }
+
+    let nextUploadIndex = 0;
+    let completedUploads = 0;
+    const failedFiles: string[] = [];
+
+    async function uploadWorker() {
+      while (nextUploadIndex < registeredItems.length) {
+        const uploadIndex = nextUploadIndex;
+        nextUploadIndex += 1;
+        const { item, media, file } = registeredItems[uploadIndex];
+
         setStatusMessage(
-          `Subiendo archivo ${index + 1} de ${pendingItems.length}…`,
+          `Subiendo archivos… ${completedUploads} de ${registeredItems.length}`,
         );
         const { error: uploadError } = await supabase.storage
           .from("listing-drafts")
-          .upload(registeredMedia.source_path, file, {
+          .upload(media.source_path, file, {
             cacheControl: "3600",
             contentType: file.type,
             // A retry overwrites only this user's deterministic object path.
             upsert: true,
           });
 
-        if (uploadError) throw uploadError;
-      } catch {
-        setMediaStatus(item.localId, {
-          status: "error",
-          error: "No se pudo subir.",
-          sourcePath: registeredMedia?.source_path ?? item.sourcePath,
-          recordId: registeredMedia?.id ?? item.recordId,
-          isPrimary: registeredMedia?.is_primary ?? item.isPrimary,
-        });
-        throw new Error(`No se pudo subir “${file.name}”.`);
-      }
+        if (uploadError) {
+          failedFiles.push(file.name);
+          setMediaStatus(item.localId, {
+            status: "error",
+            error: "No se pudo subir.",
+            sourcePath: media.source_path,
+            recordId: media.id,
+            isPrimary: media.is_primary,
+          });
+        } else {
+          setMediaStatus(item.localId, {
+            status: "uploaded",
+            sourcePath: media.source_path,
+            recordId: media.id,
+            isPrimary: media.is_primary,
+            error: undefined,
+          });
+        }
 
-      setMediaStatus(item.localId, {
-        status: "uploaded",
-        sourcePath: registeredMedia.source_path,
-        recordId: registeredMedia.id,
-        isPrimary: registeredMedia.is_primary,
-        error: undefined,
-      });
-      registeredByLocalId.set(item.localId, registeredMedia);
+        completedUploads += 1;
+        setStatusMessage(
+          `Subiendo archivos… ${completedUploads} de ${registeredItems.length}`,
+        );
+      }
+    }
+
+    await Promise.all(
+      Array.from(
+        {
+          length: Math.min(MAX_CONCURRENT_UPLOADS, registeredItems.length),
+        },
+        () => uploadWorker(),
+      ),
+    );
+
+    if (failedFiles.length > 0) {
+      throw new Error(
+        `No se pudo subir ${failedFiles.length === 1 ? "el archivo" : "los archivos"}: ${failedFiles.join(", ")}.`,
+      );
     }
 
     return registeredByLocalId;
@@ -1220,11 +1294,21 @@ export function ListingPublicationWizard({
     const validationTarget = isPublishedRevision ? 1 : 3;
     const requiresMedia = !isPublishedRevision;
 
-    if (
-      isBusy ||
-      isSubmitted ||
-      !applyValidation(validationTarget, requiresMedia)
-    ) {
+    if (isBusy || isSubmitted) {
+      return;
+    }
+
+    if (!sellerContact.isComplete) {
+      setGlobalError(
+        "Tus datos de contacto no están completos. Actualiza Mi perfil; el anuncio seguirá guardado como borrador.",
+      );
+      return;
+    }
+
+    if (!applyValidation(validationTarget, requiresMedia)) {
+      setGlobalError(
+        "Revisa el campo señalado antes de enviar el anuncio a revisión.",
+      );
       return;
     }
 
@@ -1251,6 +1335,11 @@ export function ListingPublicationWizard({
         setSuccessMessage(
           "Tus cambios fueron enviados a revisión. Mientras los evaluamos, esta propiedad dejará temporalmente de aparecer en el catálogo público; volverá al aprobarse.",
         );
+        setShowSubmissionSuccess(true);
+        void notifyReviewSubmission(
+          submittedListing.id,
+          submittedListing.version,
+        ).catch(() => undefined);
         onSubmitted?.(submittedListing.id);
         return;
       }
@@ -1275,7 +1364,12 @@ export function ListingPublicationWizard({
       setSuccessMessage(
         "Tu anuncio fue enviado a revisión. Te avisaremos cuando haya novedades.",
       );
-      onSubmitted?.(reference.id);
+      setShowSubmissionSuccess(true);
+      void notifyReviewSubmission(
+        submittedListing.id,
+        submittedListing.version,
+      ).catch(() => undefined);
+      onSubmitted?.(submittedListing.id);
     } catch (error) {
       setStatusMessage("");
       setGlobalError(presentError(error));
@@ -2316,6 +2410,42 @@ export function ListingPublicationWizard({
             </div>
           </dl>
 
+          <section
+            className={styles.sellerContactSummary}
+            data-complete={sellerContact.isComplete}
+          >
+            <div>
+              <span aria-hidden="true">✓</span>
+              <div>
+                <strong>Contacto tomado de tu perfil</strong>
+                <p>
+                  No necesitas escribir estos datos nuevamente en cada anuncio.
+                </p>
+              </div>
+            </div>
+            {sellerContact.isComplete ? (
+              <dl>
+                <div>
+                  <dt>Anunciante</dt>
+                  <dd>{sellerContact.displayName}</dd>
+                </div>
+                <div>
+                  <dt>Correo</dt>
+                  <dd>{sellerContact.email}</dd>
+                </div>
+                <div>
+                  <dt>WhatsApp</dt>
+                  <dd>{sellerContact.whatsapp}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p>
+                Falta completar o validar tu contacto. Tu teléfono de respaldo
+                permanecerá privado. <a href="/panel/cuenta">Actualizar Mi perfil</a>
+              </p>
+            )}
+          </section>
+
           <div className={styles.reviewNote}>
             <span aria-hidden="true">✓</span>
             <p>
@@ -2404,7 +2534,12 @@ export function ListingPublicationWizard({
         </ol>
       </nav>
 
-      <form className={styles.form} noValidate onSubmit={handleFormSubmit}>
+      <form
+        aria-busy={isBusy}
+        className={styles.form}
+        noValidate
+        onSubmit={handleFormSubmit}
+      >
         <div className={styles.stepIntro}>
           <span>
             Paso {step + 1} de {STEPS.length}
@@ -2523,6 +2658,50 @@ export function ListingPublicationWizard({
           </div>
         </footer>
       </form>
+
+      {busyAction === "submitting" && !showSubmissionSuccess ? (
+        <div className={styles.modalBackdrop}>
+          <div
+            aria-live="polite"
+            className={styles.progressModal}
+            role="status"
+          >
+            <span className={styles.modalSpinner} aria-hidden="true" />
+            <p className={styles.eyebrow}>Enviando anuncio</p>
+            <h3>Estamos preparando todo para revisión.</h3>
+            <p>{statusMessage || "Guardando la información…"}</p>
+            <small>No cierres esta pantalla mientras termina la carga.</small>
+          </div>
+        </div>
+      ) : null}
+
+      {showSubmissionSuccess ? (
+        <div className={styles.modalBackdrop}>
+          <div
+            aria-labelledby={`${instanceId}-success-title`}
+            aria-modal="true"
+            className={styles.successModal}
+            role="dialog"
+          >
+            <span className={styles.successModalMark} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.eyebrow}>Envío confirmado</p>
+            <h3 id={`${instanceId}-success-title`}>Tu anuncio ya está en revisión.</h3>
+            <p>
+              Zelaya Raíces recibió la información y la galería. Podrás consultar
+              su estado desde tu panel.
+            </p>
+            <a
+              className={styles.successModalButton}
+              href="/panel"
+              ref={successButtonRef}
+            >
+              Volver al panel principal
+            </a>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

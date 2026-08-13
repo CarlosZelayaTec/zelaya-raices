@@ -110,6 +110,94 @@
   font-weight: 760;
 }
 
+.gallery {
+  display: grid;
+  gap: 14px;
+  padding: 0 24px 24px;
+}
+
+.gallery > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.gallery > header div {
+  display: grid;
+  gap: 2px;
+}
+
+.gallery > header strong {
+  color: var(--green-950);
+  font-size: 13px;
+}
+
+.gallery > header span,
+.gallery > header small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.galleryGrid figure {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid rgba(23, 33, 29, 0.1);
+  border-radius: 14px;
+  background: #e8eee9;
+}
+
+.galleryGrid img,
+.galleryGrid video,
+.mediaUnavailable {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.mediaUnavailable {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+}
+
+.galleryGrid figcaption {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  left: 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9px;
+  padding: 6px 8px;
+  background: rgba(6, 43, 51, 0.86);
+  color: #fff;
+  font-size: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.galleryGrid figcaption span {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .actions {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -162,6 +250,10 @@
     grid-template-columns: 1fr;
     align-items: stretch;
   }
+
+  .galleryGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -180,5 +272,18 @@
   .facts {
     grid-template-columns: repeat(2, 1fr);
   }
-}
 
+  .gallery {
+    padding-inline: 16px;
+  }
+
+  .gallery > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .galleryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

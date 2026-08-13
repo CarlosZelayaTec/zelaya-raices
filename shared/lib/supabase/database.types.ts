@@ -527,6 +527,50 @@ export type Database = {
           },
         ]
       }
+      listing_review_notifications: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: number
+          last_error: string | null
+          listing_id: string
+          listing_version: number
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          listing_id: string
+          listing_version: number
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          listing_id?: string
+          listing_version?: number
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_review_notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           availability_status: Database["public"]["Enums"]["availability_status"]
@@ -1423,7 +1467,6 @@ export type Database = {
           seller_bio: string
           seller_email: string
           seller_name: string
-          seller_phone: string
           seller_verified: boolean
           seller_whatsapp: string
         }[]

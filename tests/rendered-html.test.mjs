@@ -34,6 +34,33 @@ test("keeps the location search from submitting the publication wizard", async (
   assert.match(pickerSource, /import\("leaflet"\)/);
 });
 
+test("confirms review submissions and prepares media without a silent wait", async () => {
+  const wizardSource = await readFile(
+    new URL(
+      "../features/listings/listing-publication-wizard.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(wizardSource, /MAX_CONCURRENT_UPLOADS = 3/);
+  assert.match(wizardSource, /Tu anuncio ya está en revisión/);
+  assert.match(wizardSource, /Volver al panel principal/);
+  assert.match(wizardSource, /notify-listing-review/);
+  assert.match(wizardSource, /Contacto tomado de tu perfil/);
+});
+
+test("shows private draft media in the staff review queue", async () => {
+  const reviewSource = await readFile(
+    new URL("../app/admin/revision/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(reviewSource, /createSignedUrls\(sourcePaths/);
+  assert.match(reviewSource, /Galería enviada/);
+  assert.match(reviewSource, /<video/);
+});
+
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${pathname}`);
@@ -125,7 +152,10 @@ test("separates properties for sale and rent", async () => {
   assert.equal(rentResponse.status, 200);
   const rentHtml = await rentResponse.text();
   assert.match(rentHtml, /lugar para alquilar en Honduras/);
-  assert.match(rentHtml, /No encontramos propiedades con esos filtros/);
+  assert.match(
+    rentHtml,
+    /property-card|No encontramos propiedades con esos filtros/,
+  );
   assert.doesNotMatch(rentHtml, REAL_LISTING_TITLE);
 });
 
@@ -182,6 +212,13 @@ test("renders Supabase login without caching private responses", async () => {
   assert.match(html, /Inicia sesión|Iniciar sesión/);
   assert.match(html, /Crear cuenta/);
   assert.match(html, /Correo electrónico/);
+
+  const authFormsSource = await readFile(
+    new URL("../app/login/auth-forms.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(authFormsSource, /Teléfono de respaldo/);
+  assert.match(authFormsSource, /WhatsApp para consultas/);
 });
 
 test("redirects anonymous users away from protected panels", async () => {

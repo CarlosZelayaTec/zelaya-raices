@@ -74,8 +74,9 @@ export default async function PanelPropertiesPage({
           <span aria-hidden="true">i</span>
           <div>
             <strong>Completa tus datos de contacto</strong>
-            Antes de enviar un anuncio a revisión, agrega un correo, teléfono y
-            WhatsApp válidos para que las personas interesadas puedan contactarte.
+            Antes de enviar un anuncio a revisión, completa una sola vez tu
+            correo, teléfono privado de respaldo y WhatsApp. Los próximos anuncios
+            usarán automáticamente esos datos.
             {" "}
             <Link href="/panel/cuenta">Completar mi perfil</Link>
           </div>

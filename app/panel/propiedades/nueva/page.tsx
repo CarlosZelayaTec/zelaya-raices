@@ -17,6 +17,20 @@ export default async function NewPropertyPage() {
     organization_type: organization.organization_type,
     verification_status: organization.verification_status,
   }));
+  const sellerContact = {
+    displayName:
+      context.profile?.display_name ?? context.identity.email ?? "Mi perfil",
+    email: context.profile?.public_email ?? null,
+    phone: context.profile?.public_phone ?? null,
+    whatsapp: context.profile?.public_whatsapp ?? null,
+    isComplete: Boolean(
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        context.profile?.public_email ?? "",
+      ) &&
+        /^\+[1-9]\d{7,14}$/.test(context.profile?.public_phone ?? "") &&
+        /^\+[1-9]\d{7,14}$/.test(context.profile?.public_whatsapp ?? ""),
+    ),
+  };
 
   return (
     <>
@@ -33,8 +47,8 @@ export default async function NewPropertyPage() {
       <ListingPublicationWizard
         initialOrganizationId={organizations[0]?.id}
         organizations={organizations}
+        sellerContact={sellerContact}
       />
     </>
   );
 }
-

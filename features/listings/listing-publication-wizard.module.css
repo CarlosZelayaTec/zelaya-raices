@@ -1192,6 +1192,172 @@
   background: transparent;
 }
 
+.sellerContactSummary {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  border: 1px solid var(--wizard-border);
+  border-radius: 18px;
+  padding: 18px;
+  background: #fff;
+}
+
+.sellerContactSummary > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.sellerContactSummary > div:first-child > span {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wizard-green-soft);
+  color: var(--wizard-green);
+  font-weight: 900;
+}
+
+.sellerContactSummary strong,
+.sellerContactSummary dd {
+  color: var(--wizard-green);
+}
+
+.sellerContactSummary p {
+  margin: 3px 0 0;
+  color: var(--wizard-muted);
+  font-size: 12px;
+}
+
+.sellerContactSummary > p {
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff4e8;
+}
+
+.sellerContactSummary a {
+  color: var(--wizard-green);
+  font-weight: 800;
+}
+
+.sellerContactSummary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.sellerContactSummary dl div {
+  min-width: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--wizard-green-soft);
+}
+
+.sellerContactSummary dt {
+  color: var(--wizard-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sellerContactSummary dd {
+  overflow-wrap: anywhere;
+  margin: 3px 0 0;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 28, 34, 0.66);
+  backdrop-filter: blur(5px);
+}
+
+.progressModal,
+.successModal {
+  width: min(100%, 520px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  padding: 34px;
+  background: #fffdf8;
+  box-shadow: 0 28px 80px rgba(0, 31, 38, 0.28);
+  text-align: center;
+}
+
+.progressModal h3,
+.successModal h3 {
+  margin: 8px 0 10px;
+  color: var(--wizard-green);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(25px, 5vw, 34px);
+  line-height: 1.1;
+}
+
+.progressModal > p:not(.eyebrow),
+.successModal > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--wizard-muted);
+  line-height: 1.65;
+}
+
+.progressModal small {
+  display: block;
+  margin-top: 15px;
+  color: var(--wizard-muted);
+}
+
+.modalSpinner,
+.successModalMark {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.modalSpinner {
+  border: 5px solid var(--wizard-green-soft);
+  border-top-color: var(--wizard-green);
+  animation: spin 0.8s linear infinite;
+}
+
+.successModalMark {
+  background: var(--wizard-green-soft);
+  color: var(--wizard-green);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.successModalButton {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  border-radius: 12px;
+  padding: 12px 22px;
+  background: var(--wizard-green);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.successModalButton:hover {
+  transform: translateY(-1px);
+  background: var(--wizard-green-dark);
+}
+
 .secondaryButton:hover:not(:disabled),
 .ghostButton:hover:not(:disabled) {
   background: var(--wizard-green-soft);
@@ -1333,6 +1499,10 @@
     flex-direction: column;
   }
 
+  .sellerContactSummary dl {
+    grid-template-columns: 1fr;
+  }
+
   .footerActions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1340,6 +1510,12 @@
 
   .footerActions > button:last-child {
     grid-column: 1 / -1;
+  }
+
+  .progressModal,
+  .successModal {
+    border-radius: 20px;
+    padding: 28px 20px;
   }
 }
 

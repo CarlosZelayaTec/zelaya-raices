@@ -182,6 +182,20 @@ export default async function EditPropertyPage({
     organization_type: organization.organization_type,
     verification_status: organization.verification_status,
   }));
+  const sellerContact = {
+    displayName:
+      context.profile?.display_name ?? context.identity.email ?? "Mi perfil",
+    email: context.profile?.public_email ?? null,
+    phone: context.profile?.public_phone ?? null,
+    whatsapp: context.profile?.public_whatsapp ?? null,
+    isComplete: Boolean(
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        context.profile?.public_email ?? "",
+      ) &&
+        /^\+[1-9]\d{7,14}$/.test(context.profile?.public_phone ?? "") &&
+        /^\+[1-9]\d{7,14}$/.test(context.profile?.public_whatsapp ?? ""),
+    ),
+  };
 
   return (
     <>
@@ -208,6 +222,7 @@ export default async function EditPropertyPage({
         initialListing={initialListing}
         initialOrganizationId={listing.organization_id}
         organizations={organizations}
+        sellerContact={sellerContact}
       />
     </>
   );

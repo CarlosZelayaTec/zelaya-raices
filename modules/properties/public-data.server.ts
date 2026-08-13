@@ -293,7 +293,6 @@ async function getPublicListingContact(
     bio: contact.seller_bio || undefined,
     email: contact.seller_email || undefined,
     name: contact.seller_name,
-    phone: contact.seller_phone || undefined,
     verified: contact.seller_verified,
     whatsapp: contact.seller_whatsapp || undefined,
   };

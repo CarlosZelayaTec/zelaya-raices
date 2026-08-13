@@ -176,6 +176,33 @@ export function AuthForms({
           </label>
 
           <label className={styles.field}>
+            <span>Teléfono de respaldo</span>
+            <input
+              autoComplete="tel"
+              inputMode="tel"
+              maxLength={30}
+              name="publicPhone"
+              placeholder="+504 9876-5432"
+              required
+              type="tel"
+            />
+            <small>Se valida para tu cuenta y no se muestra públicamente.</small>
+          </label>
+
+          <label className={styles.field}>
+            <span>WhatsApp para consultas</span>
+            <input
+              autoComplete="tel"
+              inputMode="tel"
+              maxLength={30}
+              name="publicWhatsapp"
+              placeholder="+504 9876-5432"
+              required
+              type="tel"
+            />
+          </label>
+
+          <label className={styles.field}>
             <span>Contraseña</span>
             <input
               aria-describedby="password-hint"

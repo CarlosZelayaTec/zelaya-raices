@@ -38,7 +38,6 @@ export type PropertySeller = {
   name: string;
   bio?: string;
   email?: string;
-  phone?: string;
   whatsapp?: string;
   verified: boolean;
 };

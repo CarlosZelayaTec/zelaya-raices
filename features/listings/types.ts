@@ -74,8 +74,17 @@ export type ListingWizardInitialListing = {
   media: readonly ListingWizardInitialMedia[];
 };
 
+export type ListingWizardSellerContact = {
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  isComplete: boolean;
+};
+
 export type ListingPublicationWizardProps = {
   organizations: readonly ListingWizardOrganization[];
+  sellerContact: ListingWizardSellerContact;
   initialOrganizationId?: string;
   initialListing?: ListingWizardInitialListing;
   className?: string;

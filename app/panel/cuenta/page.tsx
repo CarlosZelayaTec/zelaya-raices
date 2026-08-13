@@ -84,7 +84,7 @@ export default async function AccountPage({
               />
             </label>
             <label>
-              <span>Teléfono</span>
+              <span>Teléfono de respaldo</span>
               <input
                 defaultValue={context.profile?.public_phone ?? ""}
                 inputMode="tel"
@@ -103,10 +103,9 @@ export default async function AccountPage({
             </label>
           </div>
           <p className={accountStyles.contactHint}>
-            Estos datos se mostrarán únicamente en tus propiedades. Correo,
-            teléfono y WhatsApp son obligatorios al enviar un anuncio a
-            revisión. Indica por separado el número que realmente atiende
-            WhatsApp.
+            El correo y WhatsApp se mostrarán en tus propiedades. El teléfono de
+            respaldo se valida para tu cuenta, pero permanece privado. Los tres
+            datos se reutilizan automáticamente al enviar cada anuncio.
           </p>
           <label>
             <span>Presentación profesional</span>

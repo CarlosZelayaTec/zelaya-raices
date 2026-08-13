@@ -30,10 +30,32 @@ export default async function ReviewQueuePage({
   const { data: listings } = await supabase
     .from("listings")
     .select(
-      "id,title,description,property_type,operation_type,price_amount,price_on_request,currency_code,bedrooms,bathrooms,land_area,land_area_unit,version,created_at,organization_id,organizations(name),listing_locations(department,municipality,city,zone,visible_address),listing_media(id,media_type,source_path,is_primary,sort_order)",
+      "id,title,description,property_type,operation_type,price_amount,price_on_request,currency_code,bedrooms,bathrooms,land_area,land_area_unit,version,created_at,organization_id,organizations(name),listing_locations(department,municipality,city,zone,visible_address),listing_media(id,media_type,mime_type,source_bucket,source_path,is_primary,sort_order)",
     )
     .eq("publication_status", "pending_review")
     .order("updated_at", { ascending: true });
+  const sourcePaths = Array.from(
+    new Set(
+      (listings ?? []).flatMap((listing) =>
+        (listing.listing_media ?? [])
+          .filter((media) => media.source_bucket === "listing-drafts")
+          .map((media) => media.source_path),
+      ),
+    ),
+  );
+  const signedMediaUrls = new Map<string, string>();
+
+  if (sourcePaths.length > 0) {
+    const { data: signedUrls } = await supabase.storage
+      .from("listing-drafts")
+      .createSignedUrls(sourcePaths, 60 * 60);
+
+    for (const signedUrl of signedUrls ?? []) {
+      if (signedUrl.path && signedUrl.signedUrl) {
+        signedMediaUrls.set(signedUrl.path, signedUrl.signedUrl);
+      }
+    }
+  }
 
   return (
     <>
@@ -75,7 +97,10 @@ export default async function ReviewQueuePage({
             const organization = Array.isArray(listing.organizations)
               ? listing.organizations[0]
               : listing.organizations;
-            const images = listing.listing_media.filter(
+            const mediaItems = [...(listing.listing_media ?? [])].sort(
+              (left, right) => left.sort_order - right.sort_order,
+            );
+            const images = mediaItems.filter(
               (media) => media.media_type === "image",
             );
 
@@ -86,7 +111,7 @@ export default async function ReviewQueuePage({
                     <span>
                       {getPropertyTypeInitials(listing.property_type)}
                     </span>
-                    <small>{images.length} fotos</small>
+                    <small>{mediaItems.length} archivos</small>
                   </div>
                   <div className={reviewStyles.details}>
                     <div className={reviewStyles.heading}>
@@ -151,6 +176,65 @@ export default async function ReviewQueuePage({
                     </dl>
                   </div>
                 </div>
+
+                {mediaItems.length > 0 ? (
+                  <section
+                    aria-label={`Galería de ${listing.title}`}
+                    className={reviewStyles.gallery}
+                  >
+                    <header>
+                      <div>
+                        <strong>Galería enviada</strong>
+                        <span>
+                          Revisa el orden, la portada y cada archivo antes de
+                          publicar.
+                        </span>
+                      </div>
+                      <small>{mediaItems.length} en total</small>
+                    </header>
+                    <div className={reviewStyles.galleryGrid}>
+                      {mediaItems.map((media, index) => {
+                        const previewUrl = signedMediaUrls.get(media.source_path);
+
+                        return (
+                          <figure key={media.id}>
+                            {previewUrl && media.media_type === "image" ? (
+                              // The URL is short-lived and authorized for staff.
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                alt={`Imagen ${index + 1} de ${listing.title}`}
+                                loading="lazy"
+                                src={previewUrl}
+                              />
+                            ) : previewUrl && media.media_type === "video" ? (
+                              <video
+                                aria-label={`Video ${index + 1} de ${listing.title}`}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                src={previewUrl}
+                              />
+                            ) : (
+                              <div className={reviewStyles.mediaUnavailable}>
+                                Vista previa no disponible
+                              </div>
+                            )}
+                            <figcaption>
+                              <span>{index + 1}</span>
+                              <strong>
+                                {media.is_primary
+                                  ? "Portada"
+                                  : media.media_type === "video"
+                                    ? "Video"
+                                    : "Fotografía"}
+                              </strong>
+                            </figcaption>
+                          </figure>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ) : null}
 
                 <div className={reviewStyles.actions}>
                   <form action={moderateListingAction}>
