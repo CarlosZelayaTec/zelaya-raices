@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PropertyLocationMap } from "../../../modules/properties/components/property-location-map";
+import { PropertyMediaGallery } from "../../../modules/properties/components/property-media-gallery";
 import { isLandPropertyType } from "../../../modules/properties/property-types";
 import { getPublicPropertyBySlug } from "../../../modules/properties/public-data.server";
 import type { Property, PropertyMedia } from "../../../modules/properties/types";
@@ -242,38 +243,11 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               Contactar al vendedor
             </a>
           ) : null}
-          <section className="property-gallery" aria-label="Galería de la propiedad">
-            {orderedMedia.map((media, index) =>
-              media.type === "video" ? (
-                <video
-                  aria-label={
-                    media.altText || `Video ${index + 1} de ${property.title}`
-                  }
-                  controls
-                  key={media.id}
-                  playsInline
-                  preload="metadata"
-                  src={media.url}
-                />
-              ) : (
-                <img
-                  src={media.url}
-                  alt={
-                    media.altText ||
-                    (index === 0
-                      ? property.title
-                      : `Vista ${index + 1} de ${property.title}`)
-                  }
-                  key={media.id}
-                />
-              ),
-            )}
-            {property.verified ? (
-              <span className="verification-badge property-gallery__badge">
-                <span aria-hidden="true">✓</span> Propiedad verificada
-              </span>
-            ) : null}
-          </section>
+          <PropertyMediaGallery
+            media={orderedMedia}
+            propertyTitle={property.title}
+            verified={property.verified}
+          />
           <div className="property-detail-layout">
             <div className="property-detail-main">
               <dl className="detail-facts">

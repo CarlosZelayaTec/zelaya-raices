@@ -1,0 +1,394 @@
+.gallery {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.55fr 0.75fr;
+  grid-template-rows: repeat(2, 250px);
+  gap: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--sand);
+}
+
+.item {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: #dfe7df;
+}
+
+.item:first-child {
+  grid-row: 1 / 3;
+}
+
+.item :is(img, video) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item video {
+  background: #061827;
+}
+
+.imageButton {
+  color: #fff;
+  cursor: zoom-in;
+}
+
+.imageButton::after {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.imageButton:hover::after,
+.imageButton:focus-visible::after {
+  border-color: rgba(255, 255, 255, 0.82);
+  background: rgba(3, 26, 34, 0.08);
+}
+
+.imageButton:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
+}
+
+.zoomCue {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(5, 39, 49, 0.78);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0;
+  backdrop-filter: blur(8px);
+  transform: translateY(4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.zoomCue span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.imageButton:hover .zoomCue,
+.imageButton:focus-visible .zoomCue {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.verifiedBadge {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 3;
+  box-shadow: 0 10px 24px rgba(12, 45, 36, 0.14);
+}
+
+.openGalleryButton {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 4;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(8, 43, 53, 0.18);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(255, 254, 250, 0.94);
+  color: var(--navy-950);
+  box-shadow: 0 8px 24px rgba(8, 43, 53, 0.16);
+  font-size: 11px;
+  font-weight: 850;
+  backdrop-filter: blur(10px);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.openGalleryButton:hover,
+.openGalleryButton:focus-visible {
+  box-shadow: 0 12px 30px rgba(8, 43, 53, 0.22);
+  transform: translateY(-2px);
+}
+
+.mobileGuide,
+.mobileControls {
+  display: none;
+}
+
+.lightbox {
+  width: min(1180px, calc(100vw - 32px));
+  max-width: none;
+  height: min(900px, calc(100dvh - 32px));
+  max-height: none;
+  margin: auto;
+  overflow: hidden;
+  border: 0;
+  border-radius: 22px;
+  padding: 0;
+  background: #061c24;
+  color: #fff;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox::backdrop {
+  background: rgba(2, 15, 20, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.lightboxContent {
+  display: grid;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.lightboxContent > header,
+.lightboxContent > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  background: rgba(3, 25, 33, 0.96);
+}
+
+.lightboxContent > header div {
+  display: grid;
+}
+
+.lightboxContent > header strong {
+  overflow: hidden;
+  max-width: min(70vw, 700px);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightboxContent > header span,
+.lightboxContent > footer {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+}
+
+.closeButton,
+.lightboxArrow {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.closeButton {
+  width: 42px;
+  height: 42px;
+  font-size: 26px;
+}
+
+.closeButton:hover,
+.closeButton:focus-visible,
+.lightboxArrow:hover,
+.lightboxArrow:focus-visible {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lightboxImageWrap {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  padding: 18px 70px;
+}
+
+.lightboxImageWrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lightboxArrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  font-size: 34px;
+  transform: translateY(-50%);
+}
+
+.previousArrow {
+  left: 14px;
+}
+
+.nextArrow {
+  right: 14px;
+}
+
+.lightboxContent > footer span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .gallery {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    border-radius: 22px;
+    scroll-padding-inline: 0;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .gallery::-webkit-scrollbar {
+    display: none;
+  }
+
+  .item,
+  .item:first-child {
+    display: block;
+    height: 360px;
+    flex: 0 0 88%;
+    grid-row: auto;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .item:last-of-type {
+    flex-basis: 100%;
+  }
+
+  .zoomCue,
+  .openGalleryButton {
+    display: none;
+  }
+
+  .verifiedBadge {
+    top: 14px;
+    left: 14px;
+  }
+
+  .mobileGuide {
+    position: sticky;
+    right: 86px;
+    bottom: 14px;
+    left: 14px;
+    z-index: 5;
+    display: flex;
+    min-width: max-content;
+    height: 40px;
+    align-self: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-left: calc(-100% + 14px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    padding: 7px 12px;
+    background: rgba(5, 39, 49, 0.82);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 760;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+  }
+
+  .mobileGuide strong {
+    font-size: 10px;
+  }
+
+  .mobileControls {
+    position: sticky;
+    right: 12px;
+    bottom: 14px;
+    z-index: 6;
+    display: flex;
+    height: 40px;
+    align-self: flex-end;
+    gap: 5px;
+    margin-left: calc(-76px - 8px);
+  }
+
+  .mobileControls button {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+    background: rgba(255, 254, 250, 0.94);
+    color: var(--navy-950);
+    font-size: 25px;
+    line-height: 1;
+    box-shadow: 0 6px 18px rgba(4, 32, 41, 0.18);
+  }
+
+  .mobileControls button:disabled {
+    opacity: 0.45;
+  }
+
+  .lightbox {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .lightboxImageWrap {
+    padding: 8px 0 70px;
+  }
+
+  .lightboxArrow {
+    top: auto;
+    bottom: 14px;
+    width: 44px;
+    height: 44px;
+    transform: none;
+  }
+
+  .previousArrow {
+    left: calc(50% - 52px);
+  }
+
+  .nextArrow {
+    right: calc(50% - 52px);
+  }
+
+  .lightboxContent > footer {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .item,
+  .item:first-child {
+    height: 330px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imageButton::after,
+  .zoomCue,
+  .openGalleryButton {
+    transition: none;
+  }
+}

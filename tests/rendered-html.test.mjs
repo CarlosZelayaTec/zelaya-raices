@@ -61,6 +61,22 @@ test("shows private draft media in the staff review queue", async () => {
   assert.match(reviewSource, /<video/);
 });
 
+test("makes the public property gallery discoverable and expandable", async () => {
+  const gallerySource = await readFile(
+    new URL(
+      "../modules/properties/components/property-media-gallery.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(gallerySource, /Desliza para ver más/);
+  assert.match(gallerySource, /Ver en grande/);
+  assert.match(gallerySource, /showModal\(\)/);
+  assert.match(gallerySource, /event\.key === "ArrowRight"/);
+  assert.match(gallerySource, /event\.key === "Escape"/);
+});
+
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${pathname}`);
