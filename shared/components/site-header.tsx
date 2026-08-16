@@ -11,7 +11,7 @@ const navigation = [
   { label: "Comprar", href: "/propiedades?operacion=venta" },
   { label: "Alquilar", href: "/propiedades?operacion=alquiler" },
   { label: "Confianza", href: "/#confianza" },
-  { label: "Nosotros", href: "/#asesores" },
+  { label: "Nosotros", href: "/#fundador" },
 ];
 
 type HeaderAccount = {

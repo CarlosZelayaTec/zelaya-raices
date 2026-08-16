@@ -21,8 +21,7 @@ export function SiteFooter() {
         <div>
           <h2>Zelaya Raíces</h2>
           <Link href="/#confianza">Cómo verificamos</Link>
-          <Link href="/#historias">Historias de clientes</Link>
-          <Link href="/#asesores">Nuestros asesores</Link>
+          <Link href="/#fundador">Nuestro fundador</Link>
           <Link href="/#para-agentes">Para agentes</Link>
           <a href="mailto:hola@zelayaraices.com">Contáctanos</a>
         </div>

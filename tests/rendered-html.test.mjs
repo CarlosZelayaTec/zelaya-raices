@@ -129,8 +129,11 @@ test("renders the Zelaya Raíces public homepage", async () => {
   }
   assert.match(html, /href="\/propiedades\?operacion=venta"/);
   assert.match(html, /href="\/propiedades\?operacion=alquiler"/);
-  assert.match(html, /Historias de clientes Zelaya Raíces/);
-  assert.match(html, /Conoce al equipo detrás de cada consulta/);
+  assert.match(html, /Carlos Zelaya/);
+  assert.match(html, /Creador y CEO/);
+  assert.doesNotMatch(html, /Historias de clientes Zelaya Raíces/);
+  assert.doesNotMatch(html, /Personas que te acompañan/);
+  assert.doesNotMatch(html, /Conoce al equipo detrás de cada consulta/);
   assert.match(html, /Abrir WhatsApp para consultar a Zelaya Raíces/);
   assert.match(html, /viewBox="0 0 24 24"/);
   assert.match(html, /href="\/propiedades"/);

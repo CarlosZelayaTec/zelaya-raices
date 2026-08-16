@@ -16,6 +16,10 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+// These sections stay implemented for when real client stories and advisor
+// profiles are ready to be shown publicly.
+const SHOW_COMMUNITY_SECTIONS = false;
+
 const markets = [
   {
     name: "Tegucigalpa",
@@ -338,70 +342,131 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="section stories-section" id="historias">
-          <div className="container">
-            <div className="section-heading section-heading--split">
-              <div>
-                <p className="eyebrow">Historias reales</p>
-                <h2>La confianza también se cuenta en primera persona.</h2>
-              </div>
-              <p className="section-heading__copy">
-                Este espacio está preparado para el futuro carrusel de clientes
-                reales recibiendo las llaves de su nuevo hogar.
-              </p>
-            </div>
-            <div
-              className="testimonial-placeholder"
-              aria-label="Próximo carrusel de testimonios"
-              aria-roledescription="carrusel"
-            >
-              <div className="testimonial-placeholder__media" aria-hidden="true">
-                <span>Fotografía real del cliente</span>
-              </div>
-              <div className="testimonial-placeholder__copy">
-                <span className="placeholder-pill">Próximamente</span>
-                <h3>Historias de clientes Zelaya Raíces</h3>
-                <p>
-                  Aquí mostraremos testimonios autorizados, fotografías reales y
-                  la experiencia de cada familia, sin reseñas ficticias.
-                </p>
-                <div className="carousel-controls" aria-label="Controles del carrusel">
-                  <button aria-label="Testimonio anterior" disabled type="button">
-                    ←
-                  </button>
-                  <span>Contenido en preparación</span>
-                  <button aria-label="Testimonio siguiente" disabled type="button">
-                    →
-                  </button>
+        {SHOW_COMMUNITY_SECTIONS ? (
+          <>
+            <section className="section stories-section" id="historias">
+              <div className="container">
+                <div className="section-heading section-heading--split">
+                  <div>
+                    <p className="eyebrow">Historias reales</p>
+                    <h2>La confianza también se cuenta en primera persona.</h2>
+                  </div>
+                  <p className="section-heading__copy">
+                    Este espacio está preparado para el futuro carrusel de clientes
+                    reales recibiendo las llaves de su nuevo hogar.
+                  </p>
+                </div>
+                <div
+                  className="testimonial-placeholder"
+                  aria-label="Próximo carrusel de testimonios"
+                  aria-roledescription="carrusel"
+                >
+                  <div className="testimonial-placeholder__media" aria-hidden="true">
+                    <span>Fotografía real del cliente</span>
+                  </div>
+                  <div className="testimonial-placeholder__copy">
+                    <span className="placeholder-pill">Próximamente</span>
+                    <h3>Historias de clientes Zelaya Raíces</h3>
+                    <p>
+                      Aquí mostraremos testimonios autorizados, fotografías reales y
+                      la experiencia de cada familia, sin reseñas ficticias.
+                    </p>
+                    <div
+                      className="carousel-controls"
+                      aria-label="Controles del carrusel"
+                    >
+                      <button aria-label="Testimonio anterior" disabled type="button">
+                        ←
+                      </button>
+                      <span>Contenido en preparación</span>
+                      <button aria-label="Testimonio siguiente" disabled type="button">
+                        →
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <section className="section team-section" id="asesores">
-          <div className="container">
-            <div className="section-heading section-heading--center">
-              <p className="eyebrow">Personas que te acompañan</p>
-              <h2>Conoce al equipo detrás de cada consulta.</h2>
-              <p className="section-heading__intro">
-                Dejamos listo el espacio para presentar rostros, experiencia y
-                datos de verificación de cada asesor.
+            <section className="section team-section" id="asesores">
+              <div className="container">
+                <div className="section-heading section-heading--center">
+                  <p className="eyebrow">Personas que te acompañan</p>
+                  <h2>Conoce al equipo detrás de cada consulta.</h2>
+                  <p className="section-heading__intro">
+                    Dejamos listo el espacio para presentar rostros, experiencia y
+                    datos de verificación de cada asesor.
+                  </p>
+                </div>
+                <div className="team-placeholder-grid">
+                  {[
+                    "Asesor de compra",
+                    "Asesor de alquiler",
+                    "Especialista local",
+                  ].map((role) => (
+                    <article className="team-placeholder-card" key={role}>
+                      <div
+                        className="team-placeholder-card__portrait"
+                        aria-hidden="true"
+                      >
+                        <span>Foto</span>
+                      </div>
+                      <span className="placeholder-pill">Perfil próximo</span>
+                      <h3>{role}</h3>
+                      <p>Nombre, zona de atención y credenciales verificadas.</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        <section className="section founder-section" id="fundador">
+          <div className="container founder-section__inner">
+            <figure className="founder-section__portrait">
+              <div className="founder-section__portrait-frame">
+                <span className="founder-section__portrait-ring" aria-hidden="true" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt="Carlos Zelaya, creador y CEO de Zelaya Raíces"
+                  loading="lazy"
+                  src="/brand/carlos-zelaya-founder.png"
+                />
+              </div>
+              <figcaption>
+                <span>Creador y CEO</span>
+                <strong>Carlos Zelaya</strong>
+              </figcaption>
+            </figure>
+
+            <div className="founder-section__copy">
+              <p className="eyebrow">Detrás de Zelaya Raíces</p>
+              <h2>Tecnología inmobiliaria construida desde Honduras.</h2>
+              <p className="founder-section__lead">
+                Zelaya Raíces nace con una meta clara: hacer que buscar, publicar
+                y evaluar una propiedad sea un proceso más transparente, seguro
+                y sencillo para todos.
               </p>
-            </div>
-            <div className="team-placeholder-grid">
-              {["Asesor de compra", "Asesor de alquiler", "Especialista local"].map(
-                (role) => (
-                  <article className="team-placeholder-card" key={role}>
-                    <div className="team-placeholder-card__portrait" aria-hidden="true">
-                      <span>Foto</span>
-                    </div>
-                    <span className="placeholder-pill">Perfil próximo</span>
-                    <h3>{role}</h3>
-                    <p>Nombre, zona de atención y credenciales verificadas.</p>
-                  </article>
-                ),
-              )}
+              <blockquote>
+                “Estoy construyendo una plataforma donde cada anuncio transmita
+                confianza y cada persona pueda tomar decisiones con información
+                clara.”
+              </blockquote>
+              <dl className="founder-section__principles">
+                <div>
+                  <dt>Visión</dt>
+                  <dd>Modernizar la experiencia inmobiliaria</dd>
+                </div>
+                <div>
+                  <dt>Compromiso</dt>
+                  <dd>Confianza, claridad y mejora continua</dd>
+                </div>
+                <div>
+                  <dt>Origen</dt>
+                  <dd>Honduras</dd>
+                </div>
+              </dl>
             </div>
           </div>
         </section>
